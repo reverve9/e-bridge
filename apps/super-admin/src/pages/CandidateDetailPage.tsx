@@ -132,7 +132,7 @@ export default function CandidateDetailPage() {
             <CandidateProfileTab candidate={candidate} onUpdate={fetchCandidate} />
           )}
           {activeTab === 'pledge' && (
-            <CandidatePledgeTab candidate={candidate} onUpdate={fetchCandidate} />
+            <CandidatePledgeTab candidateId={candidate.id} onUpdate={...} />
           )}
           {activeTab === 'contact' && (
             <CandidateContactTab candidate={candidate} onUpdate={fetchCandidate} />
