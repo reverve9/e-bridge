@@ -7,10 +7,10 @@ import {
   Heart,
   Send,
   Newspaper,
-  Target,
   User,
   Camera,
   X,
+  Share2,
 } from 'lucide-react';
 import { supabase, getPartyColor } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
@@ -68,6 +68,7 @@ interface Feed {
   type: string;
   title: string;
   content: string | null;
+  source_url: string | null;
   likes_count: number;
   published_at: string;
 }
@@ -76,14 +77,72 @@ interface Cheer {
   id: string;
   name: string;
   message: string;
+  likes_count: number;
   created_at: string;
 }
 
-interface QnA {
-  id: string;
-  question: string;
-  answer: string | null;
-  is_answered: boolean;
+// FeedItem 컴포넌트 (깜빡임 방지를 위해 외부 정의)
+function FeedItemComponent({ 
+  item, 
+  partyColor, 
+  formatTime 
+}: { 
+  item: Feed; 
+  partyColor: string; 
+  formatTime: (dateStr: string) => string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hasLongContent = item.content && item.content.length > 50;
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm">
+      {/* 상단: 타입 + 제목 + 시간 (한 줄) */}
+      <div className="flex items-center gap-1.5">
+        {item.type === 'activity' ? (
+          <Camera size={14} className="flex-shrink-0" style={{ color: partyColor }} />
+        ) : item.type === 'news' ? (
+          <Newspaper size={14} className="flex-shrink-0" style={{ color: partyColor }} />
+        ) : (
+          <Newspaper size={14} className="flex-shrink-0" style={{ color: partyColor }} />
+        )}
+        <span className="text-xs text-gray-400 flex-shrink-0">
+          {item.type === 'activity' ? '활동' : item.type === 'news' ? '뉴스' : '공지'}
+        </span>
+        <h4 className="font-semibold text-gray-900 text-sm truncate flex-1">{item.title}</h4>
+        <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(item.published_at)}</span>
+      </div>
+
+      {/* 내용 */}
+      {item.content && (
+        <div className="mt-1.5">
+          <p className={`text-sm text-gray-600 ${!expanded && hasLongContent ? 'line-clamp-1' : ''}`}>
+            {item.content}
+          </p>
+          {hasLongContent && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-gray-400 mt-1"
+            >
+              {expanded ? '접기' : '더보기'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 원문 링크 */}
+      {item.source_url && (
+        <a
+          href={item.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 mt-2 text-xs font-medium"
+          style={{ color: partyColor }}
+        >
+          원문 보기 →
+        </a>
+      )}
+    </div>
+  );
 }
 
 // SNS 아이콘 컴포넌트
@@ -140,15 +199,16 @@ export default function CandidatePage() {
   const [pledges, setPledges] = useState<Pledge[]>([]);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [cheers, setCheers] = useState<Cheer[]>([]);
-  const [qnas, setQnas] = useState<QnA[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'feed' | 'pledge' | 'qna'>('feed');
   const [showCheerModal, setShowCheerModal] = useState(false);
+  const [cheerName, setCheerName] = useState('');
   const [cheerMessage, setCheerMessage] = useState('');
   
   // 프로필 더보기 상태
   const [showAllProfile, setShowAllProfile] = useState(false);
   const [showAllIntro, setShowAllIntro] = useState(false);
+  const [showAllPledges, setShowAllPledges] = useState(false);
+  const [showAllFeeds, setShowAllFeeds] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -168,19 +228,26 @@ export default function CandidatePage() {
 
       setCandidate(candidateData);
 
-      const [profileRes, pledgesRes, feedsRes, cheersRes, qnasRes] = await Promise.all([
+      // 방문 기록 저장
+      const { error: visitError } = await supabase
+        .from('page_visits')
+        .insert({ candidate_id: candidateData.id });
+      
+      if (visitError) {
+        console.error('방문 기록 저장 실패:', visitError);
+      }
+
+      const [profileRes, pledgesRes, feedsRes, cheersRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('candidate_id', candidateData.id).maybeSingle(),
-        supabase.from('pledges').select('*').eq('candidate_id', candidateData.id).order('priority'),
+        supabase.from('pledges').select('*').eq('candidate_id', candidateData.id).order('order'),
         supabase.from('feeds').select('*').eq('candidate_id', candidateData.id).order('published_at', { ascending: false }).limit(10),
         supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false }).limit(10),
-        supabase.from('qna').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).eq('is_answered', true).order('created_at', { ascending: false }),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data);
       if (pledgesRes.data) setPledges(pledgesRes.data);
       if (feedsRes.data) setFeeds(feedsRes.data);
       if (cheersRes.data) setCheers(cheersRes.data);
-      if (qnasRes.data) setQnas(qnasRes.data);
 
       setLoading(false);
     };
@@ -188,15 +255,27 @@ export default function CandidatePage() {
     fetchData();
   }, [partyCode, candidateCode]);
 
+  // 이름 마스킹 함수 (김민석 → 김*석)
+  const maskName = (name: string) => {
+    if (!name || name.trim() === '') return '익명';
+    const trimmed = name.trim();
+    if (trimmed.length === 1) return trimmed;
+    if (trimmed.length === 2) return trimmed[0] + '*';
+    return trimmed[0] + '*'.repeat(trimmed.length - 2) + trimmed[trimmed.length - 1];
+  };
+
   const handleCheerSubmit = async () => {
     if (!cheerMessage.trim() || !candidate) return;
 
+    const displayName = cheerName.trim() ? maskName(cheerName) : '익명';
+
     await supabase.from('cheers').insert({
       candidate_id: candidate.id,
-      name: '익명',
+      name: displayName,
       message: cheerMessage,
     });
 
+    setCheerName('');
     setCheerMessage('');
     setShowCheerModal(false);
     
@@ -288,8 +367,8 @@ export default function CandidatePage() {
   const totalProfileItems = educationList.length + careerList.length;
   
   // 미리보기: 학력 1개, 경력 1개
-  const PREVIEW_EDU_COUNT = 1;
-  const PREVIEW_CAREER_COUNT = 1;
+  const PREVIEW_EDU_COUNT = 2;
+  const PREVIEW_CAREER_COUNT = 2;
   const hasMoreItems = educationList.length > PREVIEW_EDU_COUNT || careerList.length > PREVIEW_CAREER_COUNT;
 
   const visibleEducation = showAllProfile ? educationList : educationList.slice(0, PREVIEW_EDU_COUNT);
@@ -402,6 +481,15 @@ export default function CandidatePage() {
             </div>
           )}
 
+          {/* QR코드 (우측 하단) */}
+          <div className="absolute bottom-3 right-3 z-10">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
+              alt="QR코드"
+              className="w-16 h-16 rounded-lg bg-white p-1 shadow-lg"
+            />
+          </div>
+
           <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent flex items-end px-4 pb-3">
             {candidate.slogan && (
               <p 
@@ -422,60 +510,18 @@ export default function CandidatePage() {
         </section>
       )}
 
-      {/* ========== 연락처 박스 (QR + 정보) ========== */}
-      {(candidate.contact_address || candidate.contact_phone || candidate.contact_email) && (
-        <section className="px-4 mt-3">
-          <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
-            {/* 좌측: QR코드 */}
-            <div className="flex-shrink-0">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
-                alt="QR코드"
-                className="w-24 h-24 rounded-lg"
-              />
-            </div>
-            {/* 우측: 연락처 정보 */}
-            <div className="flex-1 text-sm">
-              <h3 className="font-bold text-gray-900 mb-2">선거운동 연락사무소</h3>
-              <div className="space-y-1">
-                {candidate.contact_address && (
-                  <p className="text-gray-700">
-                    <span className="text-gray-400 w-14 inline-block">주소</span>
-                    {candidate.contact_address}
-                  </p>
-                )}
-                {candidate.contact_phone && (
-                  <p className="text-gray-700">
-                    <span className="text-gray-400 w-14 inline-block">연락처</span>
-                    <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
-                      {candidate.contact_phone}
-                    </a>
-                  </p>
-                )}
-                {candidate.contact_email && (
-                  <p className="text-gray-700">
-                    <span className="text-gray-400 w-14 inline-block">이메일</span>
-                    <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
-                      {candidate.contact_email}
-                    </a>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ========== 프로필 섹션 (카드) ========== */}
-      {totalProfileItems > 0 && (
+      {/* ========== 프로필 섹션 (통합: 학력 + 경력 + 인사말) ========== */}
+      {(profile?.introduction || totalProfileItems > 0) && (
         <section className="px-4 mt-3">
           <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 mb-3">프로필</h3>
+            
             {/* 학력 */}
-            {visibleEducation.length > 0 && (
-              <div className={visibleCareer.length > 0 ? 'mb-4' : ''}>
-                <h3 className="text-xs font-semibold text-gray-400 mb-2">학력</h3>
+            {educationList.length > 0 && (
+              <div className="mb-3">
+                <h4 className="text-xs font-semibold text-gray-400 mb-2">학력</h4>
                 <ul className="space-y-1">
-                  {visibleEducation.map((edu: any, idx: number) => (
+                  {(showAllProfile ? educationList : educationList.slice(0, 2)).map((edu: any, idx: number) => (
                     <li key={`edu-${idx}`} className="text-sm text-gray-700">
                       • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
                     </li>
@@ -485,11 +531,11 @@ export default function CandidatePage() {
             )}
 
             {/* 경력 */}
-            {visibleCareer.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 mb-2">주요 경력</h3>
+            {careerList.length > 0 && (
+              <div className="mb-3">
+                <h4 className="text-xs font-semibold text-gray-400 mb-2">주요 경력</h4>
                 <ul className="space-y-1.5">
-                  {visibleCareer.map((c: any, idx: number) => (
+                  {(showAllProfile ? careerList : careerList.slice(0, 2)).map((c: any, idx: number) => (
                     <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
                       <span 
                         className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
@@ -510,60 +556,80 @@ export default function CandidatePage() {
               </div>
             )}
 
-            {/* 더보기 */}
-            {hasMoreItems && (
-              <div className="flex justify-end mt-3">
-                <button
-                  onClick={() => setShowAllProfile(!showAllProfile)}
-                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
-                >
-                  {showAllProfile ? '접기' : '더보기'}
-                  <ChevronDown 
-                    size={14} 
-                    className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`}
-                  />
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ========== 인사말 섹션 (카드) ========== */}
-      {profile?.introduction && (
-        <section className="px-4 mt-3">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h3 className="text-xs font-semibold text-gray-400 mb-3">인사말</h3>
-            <div className="text-sm text-gray-700 leading-relaxed">
-              {showAllIntro ? (
-                <p className="whitespace-pre-line">{profile.introduction}</p>
-              ) : (
-                <p className="line-clamp-3">{profile.introduction}</p>
-              )}
-            </div>
-            {/* 이름 + 싸인 (중앙 정렬) */}
-            {showAllIntro && (
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
-                {(candidate as any).signature_url && (
-                  <img 
-                    src={(candidate as any).signature_url} 
-                    alt="싸인" 
-                    className="h-8 object-contain"
-                  />
+            {/* 인사말 (타이틀 없이) */}
+            {profile?.introduction && (
+              <div className="text-sm text-gray-700 leading-relaxed">
+                {showAllProfile ? (
+                  <>
+                    <p className="whitespace-pre-line">{profile.introduction}</p>
+                    {/* 이름 + 싸인 */}
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
+                      {(candidate as any).signature_url && (
+                        <img 
+                          src={(candidate as any).signature_url} 
+                          alt="싸인" 
+                          className="h-8 object-contain"
+                        />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="line-clamp-2">{profile.introduction}</p>
                 )}
               </div>
             )}
-            {profile.introduction.length > 100 && (
+
+            {/* 더보기/접기 버튼 */}
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={() => setShowAllProfile(!showAllProfile)}
+                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+              >
+                {showAllProfile ? '접기' : '더보기'}
+                <ChevronDown 
+                  size={14} 
+                  className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ========== 핵심공약 섹션 (고정) ========== */}
+      {pledges.length > 0 && (
+        <section className="px-4 mt-3">
+          <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 mb-3">핵심공약</h3>
+            <div className="space-y-2.5">
+              {(showAllPledges ? pledges : pledges.slice(0, 3)).map((pledge, idx) => (
+                <div key={pledge.id} className="flex items-start gap-2">
+                  <div 
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5"
+                    style={{ backgroundColor: partyColor, fontSize: '11px', fontWeight: 600 }}
+                  >
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-gray-900 leading-snug" style={{ fontSize: '15px', fontWeight: 600 }}>{pledge.title}</h4>
+                    {pledge.description && (
+                      <p className="text-gray-500 leading-snug mt-0.5" style={{ fontSize: '13px' }}>{pledge.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {pledges.length > 3 && (
               <div className="flex justify-end mt-3">
                 <button
-                  onClick={() => setShowAllIntro(!showAllIntro)}
+                  onClick={() => setShowAllPledges(!showAllPledges)}
                   className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
                 >
-                  {showAllIntro ? '접기' : '더보기'}
+                  {showAllPledges ? '접기' : `더보기 (${pledges.length - 3}개)`}
                   <ChevronDown 
                     size={14} 
-                    className={`transition-transform ${showAllIntro ? 'rotate-180' : ''}`}
+                    className={`transition-transform ${showAllPledges ? 'rotate-180' : ''}`}
                   />
                 </button>
               </div>
@@ -572,126 +638,35 @@ export default function CandidatePage() {
         </section>
       )}
 
-      {/* ========== 탭 네비게이션 ========== */}
-      <section className="bg-white mt-2 px-6 py-3 sticky top-0 z-20 border-b border-gray-100">
-        <div className="flex gap-1">
-          {[
-            { id: 'feed', label: '최근 소식', icon: Newspaper },
-            { id: 'pledge', label: '핵심 공약', icon: Target },
-            { id: 'qna', label: '질문/답변', icon: MessageCircle },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  isActive ? 'text-white' : 'text-gray-500 bg-gray-50'
-                }`}
-                style={isActive ? { backgroundColor: partyColor } : {}}
-              >
-                <Icon size={16} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ========== 탭 컨텐츠 ========== */}
-      <section className="px-4 py-4">
-        {activeTab === 'feed' && (
-          <div className="space-y-4">
-            {feeds.length === 0 ? (
-              <p className="text-center text-gray-400 py-8">등록된 소식이 없습니다</p>
-            ) : (
-              feeds.map((item, idx) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white rounded-2xl p-4 shadow-sm"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${partyColor}20` }}>
-                      {item.type === 'activity' ? <Camera size={16} style={{ color: partyColor }} /> : <Newspaper size={16} style={{ color: partyColor }} />}
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-xs text-gray-400">{item.type === 'activity' ? '활동' : '뉴스'}</span>
-                      <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">{formatTime(item.published_at)}</span>
-                  </div>
-                  {item.content && <p className="text-sm text-gray-600 mb-2">{item.content}</p>}
-                  <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-1 text-gray-400 text-sm">
-                      <Heart size={16} />
-                      <span>{item.likes_count}</span>
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === 'pledge' && (
+      {/* ========== 최근 소식 섹션 ========== */}
+      <section className="px-4 mt-4">
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <h3 className="font-bold text-gray-900 mb-3">최근 소식</h3>
           <div className="space-y-3">
-            {pledges.length === 0 ? (
-              <p className="text-center text-gray-400 py-8">등록된 공약이 없습니다</p>
+            {feeds.length === 0 ? (
+              <p className="text-center text-gray-400 py-4">등록된 소식이 없습니다</p>
             ) : (
-              pledges.map((pledge, idx) => (
-                <motion.div
-                  key={pledge.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white rounded-2xl p-5 shadow-sm"
-                >
-                  <div className="flex items-start gap-4">
-                    <span className="text-3xl">{pledge.emoji}</span>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 mb-1">{pledge.title}</h4>
-                      {pledge.description && <p className="text-sm text-gray-500">{pledge.description}</p>}
-                    </div>
-                  </div>
-                </motion.div>
-              ))
+              <>
+                {(showAllFeeds ? feeds : feeds.slice(0, 5)).map((item) => (
+                  <FeedItemComponent 
+                    key={item.id} 
+                    item={item} 
+                    partyColor={partyColor} 
+                    formatTime={formatTime}
+                  />
+                ))}
+                {feeds.length > 5 && (
+                  <button
+                    onClick={() => setShowAllFeeds(!showAllFeeds)}
+                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
+                  >
+                    {showAllFeeds ? '접기' : `더보기 (${feeds.length - 5}개)`}
+                  </button>
+                )}
+              </>
             )}
           </div>
-        )}
-
-        {activeTab === 'qna' && (
-          <div className="space-y-4">
-            {qnas.length === 0 ? (
-              <p className="text-center text-gray-400 py-8">등록된 Q&A가 없습니다</p>
-            ) : (
-              qnas.map((item, idx) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white rounded-2xl p-4 shadow-sm"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">Q</div>
-                    <p className="font-medium text-gray-900 text-sm flex-1">{item.question}</p>
-                  </div>
-                  <div className="flex items-start gap-3 pl-9">
-                    <div 
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: partyColor }}
-                    >A</div>
-                    <p className="text-sm text-gray-600 flex-1">{item.answer}</p>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-        )}
+        </div>
       </section>
 
       {/* ========== 응원 메시지 ========== */}
@@ -705,18 +680,35 @@ export default function CandidatePage() {
             {cheers.length === 0 ? (
               <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
-              cheers.slice(0, 3).map((cheer) => (
-                <div key={cheer.id} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+              cheers.slice(0, 5).map((cheer) => (
+                <div key={cheer.id} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                     <User size={16} className="text-gray-400" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-900">{cheer.name}</span>
                       <span className="text-xs text-gray-400">{formatTime(cheer.created_at)}</span>
                     </div>
-                    <p className="text-sm text-gray-600">{cheer.message}</p>
+                    <p className="text-sm text-gray-600 truncate">{cheer.message}</p>
                   </div>
+                  <button 
+                    onClick={async () => {
+                      await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                      const { data } = await supabase
+                        .from('cheers')
+                        .select('*')
+                        .eq('candidate_id', candidate.id)
+                        .eq('is_visible', true)
+                        .order('created_at', { ascending: false })
+                        .limit(10);
+                      if (data) setCheers(data);
+                    }}
+                    className="flex items-center gap-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                  >
+                    <Heart size={14} />
+                    <span className="text-xs">{cheer.likes_count || 0}</span>
+                  </button>
                 </div>
               ))
             )}
@@ -732,25 +724,68 @@ export default function CandidatePage() {
         </div>
       </section>
 
+      {/* ========== 연락사무소 푸터 ========== */}
+      {(candidate.contact_address || candidate.contact_phone || candidate.contact_email) && (
+        <footer className="bg-gray-100 px-6 py-6 mt-6">
+          <h3 className="font-bold text-gray-900 mb-3 text-sm">선거운동 연락사무소</h3>
+          <div className="space-y-2 text-sm">
+            {candidate.contact_address && (
+              <p className="text-gray-600">
+                <span className="text-gray-400 w-12 inline-block">주소</span>
+                {candidate.contact_address}
+              </p>
+            )}
+            {candidate.contact_phone && (
+              <p className="text-gray-600">
+                <span className="text-gray-400 w-12 inline-block">전화</span>
+                <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
+                  {candidate.contact_phone}
+                </a>
+              </p>
+            )}
+            {candidate.contact_email && (
+              <p className="text-gray-600">
+                <span className="text-gray-400 w-12 inline-block">이메일</span>
+                <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
+                  {candidate.contact_email}
+                </a>
+              </p>
+            )}
+          </div>
+        </footer>
+      )}
+
       <div className="h-24" />
 
-      {/* ========== 하단 고정 바 ========== */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3" style={{ maxWidth: '430px', margin: '0 auto' }}>
-        <div className="flex gap-2">
-          <button 
-            className="flex-1 py-3 rounded-xl font-semibold text-white"
-            style={{ backgroundColor: partyColor }}
-          >
-            📣 이 후보 알리기
-          </button>
-          <button 
-            onClick={() => setShowCheerModal(true)}
-            className="px-4 py-3 rounded-xl font-semibold border-2"
-            style={{ borderColor: partyColor, color: partyColor }}
-          >
-            <Heart size={20} />
-          </button>
-        </div>
+      {/* ========== 플로팅 버튼들 ========== */}
+      <div className="fixed bottom-6 right-4 flex flex-col gap-2" style={{ maxWidth: '430px' }}>
+        {/* 공유 버튼 */}
+        <button 
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({
+                title: `${candidate.name} 후보`,
+                text: candidate.slogan || `${candidate.name} 후보를 소개합니다`,
+                url: window.location.href,
+              });
+            } else {
+              navigator.clipboard.writeText(window.location.href);
+              alert('링크가 복사되었습니다!');
+            }
+          }}
+          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white"
+          style={{ backgroundColor: partyColor }}
+        >
+          <Share2 size={20} />
+        </button>
+        {/* 응원 버튼 */}
+        <button 
+          onClick={() => setShowCheerModal(true)}
+          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center bg-white border-2"
+          style={{ borderColor: partyColor, color: partyColor }}
+        >
+          <Heart size={20} />
+        </button>
       </div>
 
       {/* ========== 응원 모달 ========== */}
@@ -777,12 +812,20 @@ export default function CandidatePage() {
                   <X size={24} className="text-gray-400" />
                 </button>
               </div>
+              <input
+                type="text"
+                value={cheerName}
+                onChange={(e) => setCheerName(e.target.value)}
+                placeholder="이름 (비우면 익명)"
+                className="w-full p-4 bg-gray-50 rounded-xl mb-3 focus:outline-none focus:ring-2"
+              />
               <textarea
                 value={cheerMessage}
                 onChange={(e) => setCheerMessage(e.target.value)}
                 placeholder="후보자에게 응원 메시지를 남겨주세요!"
-                className="w-full h-32 p-4 bg-gray-50 rounded-xl resize-none focus:outline-none focus:ring-2"
+                className="w-full h-28 p-4 bg-gray-50 rounded-xl resize-none focus:outline-none focus:ring-2"
               />
+              <p className="text-xs text-gray-400 mt-2">* 이름은 김*석 형태로 표시됩니다</p>
               <button 
                 onClick={handleCheerSubmit}
                 className="w-full mt-4 py-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2"

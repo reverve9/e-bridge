@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase';
 
 interface Pledge {
   id: string;
-  emoji: string;
   title: string;
   description: string;
   order: number;
@@ -14,8 +13,6 @@ interface CandidatePledgeTabProps {
   candidateId: string;
   onUpdate?: () => void;
 }
-
-const EMOJI_OPTIONS = ['🎯', '💰', '🏥', '🎓', '🏠', '🚗', '🌳', '👶', '👴', '💼', '🔒', '🌐'];
 
 export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidatePledgeTabProps) {
   const [pledges, setPledges] = useState<Pledge[]>([]);
@@ -42,7 +39,6 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
   const addPledge = () => {
     const newPledge: Pledge = {
       id: `temp-${Date.now()}`,
-      emoji: '🎯',
       title: '',
       description: '',
       order: pledges.length,
@@ -90,7 +86,6 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
         .from('pledges')
         .insert(validPledges.map((p, idx) => ({
           candidate_id: candidateId,
-          emoji: p.emoji,
           title: p.title,
           description: p.description || null,
           order: idx,
@@ -117,7 +112,10 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-gray-900">핵심 공약</h3>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">핵심 공약</h3>
+          <p className="text-sm text-gray-500 mt-1">유권자 앱에서 인사말 아래에 표시됩니다.</p>
+        </div>
         <button
           onClick={addPledge}
           className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
@@ -151,16 +149,10 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
                 </button>
               </div>
 
-              {/* 이모지 선택 */}
-              <select
-                value={pledge.emoji}
-                onChange={(e) => updatePledge(pledge.id, 'emoji', e.target.value)}
-                className="w-16 h-10 text-2xl text-center border border-gray-200 rounded-lg bg-white"
-              >
-                {EMOJI_OPTIONS.map(emoji => (
-                  <option key={emoji} value={emoji}>{emoji}</option>
-                ))}
-              </select>
+              {/* 번호 */}
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1">
+                {idx + 1}
+              </div>
 
               {/* 내용 */}
               <div className="flex-1 space-y-2">

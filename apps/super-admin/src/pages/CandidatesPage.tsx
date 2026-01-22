@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, ExternalLink } from 'lucide-react';
+import { Plus, Search, Trash2, Eye, RefreshCw, ExternalLink } from 'lucide-react';
 import { supabase, Candidate, getPartyColor } from '../lib/supabase';
 
 // 선거 종류 라벨
@@ -240,13 +240,6 @@ export default function CandidatesPage() {
                           title="보기"
                         >
                           <Eye size={18} className="text-gray-500" />
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/candidates/${candidate.id}/edit`)}
-                          className="p-2 hover:bg-gray-100 rounded-lg" 
-                          title="수정"
-                        >
-                          <Edit size={18} className="text-gray-500" />
                         </button>
                         {deleteConfirm === candidate.id ? (
                           <div className="flex items-center gap-1">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, User, FileText, Target, Phone, ExternalLink } from 'lucide-react';
+import { ArrowLeft, User, FileText, Target, Phone, ExternalLink, Eye, RotateCcw } from 'lucide-react';
 import { supabase, Candidate, getPartyColor } from '../lib/supabase';
 import CandidateInfoTab from '../components/candidate/CandidateInfoTab';
 import CandidateProfileTab from '../components/candidate/CandidateProfileTab';
@@ -22,6 +22,8 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [visitStats, setVisitStats] = useState({ total: 0, today: 0 });
+  const [resetConfirm, setResetConfirm] = useState(false);
 
   const fetchCandidate = async () => {
     if (!id) return;
@@ -39,7 +41,40 @@ export default function CandidateDetailPage() {
     }
 
     setCandidate(data);
+    await fetchVisitStats(id);
     setLoading(false);
+  };
+
+  const fetchVisitStats = async (candidateId: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [totalRes, todayRes] = await Promise.all([
+      supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
+      supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId).gte('visited_at', today.toISOString()),
+    ]);
+
+    setVisitStats({
+      total: totalRes.count || 0,
+      today: todayRes.count || 0,
+    });
+  };
+
+  const handleResetVisits = async () => {
+    if (!id) return;
+
+    const { error } = await supabase
+      .from('page_visits')
+      .delete()
+      .eq('candidate_id', id);
+
+    if (error) {
+      alert('초기화에 실패했습니다.');
+    } else {
+      alert('방문자 기록이 초기화되었습니다.');
+      setVisitStats({ total: 0, today: 0 });
+    }
+    setResetConfirm(false);
   };
 
   useEffect(() => {
@@ -91,13 +126,56 @@ export default function CandidateDetailPage() {
           </div>
         </div>
         <Link
-          to={`/${candidate.party_code}/${candidate.candidate_code}`}
+          to={`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`}
           target="_blank"
           className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           <ExternalLink size={18} />
           유권자 페이지
         </Link>
+      </div>
+
+      {/* 방문자 통계 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Eye size={18} className="text-blue-500" />
+              <span className="text-sm text-gray-500">총 방문자</span>
+              <span className="font-bold text-gray-900">{visitStats.total}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Eye size={18} className="text-purple-500" />
+              <span className="text-sm text-gray-500">오늘 방문자</span>
+              <span className="font-bold text-gray-900">{visitStats.today}</span>
+            </div>
+          </div>
+          {resetConfirm ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-red-600">정말 초기화?</span>
+              <button
+                onClick={handleResetVisits}
+                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+              >
+                확인
+              </button>
+              <button
+                onClick={() => setResetConfirm(false)}
+                className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+              >
+                취소
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setResetConfirm(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+            >
+              <RotateCcw size={14} />
+              방문자 초기화
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 탭 네비게이션 */}

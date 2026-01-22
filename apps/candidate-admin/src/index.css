@@ -14,27 +14,35 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #ffffff;
+  background-color: #f5f5f5;
 }
 
-/* 모바일 앱 고정 사이즈 - 라운드 없음 */
+/* 모바일: 고정 사이즈 */
 #root {
-  max-width: 430px;
   min-height: 100vh;
-  margin: 0 auto;
-  background-color: #ffffff;
+  background-color: #f5f5f5;
   position: relative;
   overflow-x: hidden;
 }
 
-/* 데스크탑에서도 라운드 없이 */
-@media (min-width: 431px) {
+/* 모바일 전용 (430px 이하) */
+@media (max-width: 767px) {
+  #root {
+    max-width: 430px;
+    margin: 0 auto;
+    background-color: #ffffff;
+  }
+  
   body {
     background-color: #f5f5f5;
   }
-  
+}
+
+/* PC (768px 이상) - 전체 너비 사용 */
+@media (min-width: 768px) {
   #root {
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
+    max-width: none;
+    background-color: #f5f5f5;
   }
 }
 
