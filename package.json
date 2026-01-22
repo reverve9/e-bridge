@@ -1,0 +1,19 @@
+{
+  "name": "e-bridge",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:super-admin": "turbo run dev --filter=super-admin",
+    "dev:candidate-admin": "turbo run dev --filter=candidate-admin",
+    "dev:voter-app": "turbo run dev --filter=voter-app",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}
