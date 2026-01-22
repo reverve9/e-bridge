@@ -202,7 +202,7 @@ export default function CandidatesPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img 
-                          src={`https://chart.googleapis.com/chart?cht=qr&chs=60x60&chl=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}&choe=UTF-8`}
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
                           alt="QR"
                           className="w-12 h-12 rounded"
                         />

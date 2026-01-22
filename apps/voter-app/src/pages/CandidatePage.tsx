@@ -423,57 +423,44 @@ export default function CandidatePage() {
       )}
 
       {/* ========== 연락처 박스 (QR + 정보) ========== */}
-      {(candidate.contact_address || candidate.contact_phone || candidate.contact_email || activeSns.length > 0) && (
+      {(candidate.contact_address || candidate.contact_phone || candidate.contact_email) && (
         <section className="px-4 mt-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
             {/* 좌측: QR코드 */}
             <div className="flex-shrink-0">
               <img 
-                src={`https://chart.googleapis.com/chart?cht=qr&chs=100x100&chl=${encodeURIComponent(`${window.location.origin}/${candidate.party_code}/${candidate.candidate_code}`)}&choe=UTF-8`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
                 alt="QR코드"
                 className="w-24 h-24 rounded-lg"
               />
             </div>
             {/* 우측: 연락처 정보 */}
-            <div className="flex-1 text-sm space-y-1">
-              {candidate.contact_address && (
-                <p className="text-gray-700">
-                  <span className="text-gray-400 w-14 inline-block">주소</span>
-                  {candidate.contact_address}
-                </p>
-              )}
-              {candidate.contact_phone && (
-                <p className="text-gray-700">
-                  <span className="text-gray-400 w-14 inline-block">연락처</span>
-                  <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
-                    {candidate.contact_phone}
-                  </a>
-                </p>
-              )}
-              {candidate.contact_email && (
-                <p className="text-gray-700">
-                  <span className="text-gray-400 w-14 inline-block">이메일</span>
-                  <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
-                    {candidate.contact_email}
-                  </a>
-                </p>
-              )}
-              {/* SNS 링크 텍스트 */}
-              {activeSns.length > 0 && (
-                <div className="pt-1 flex flex-wrap gap-x-3 gap-y-1">
-                  {activeSns.map(({ key, url, label }) => (
-                    <a 
-                      key={key}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 text-xs"
-                    >
-                      {label}
+            <div className="flex-1 text-sm">
+              <p className="text-xs font-semibold text-gray-500 mb-2">선거운동 연락사무소</p>
+              <div className="space-y-1">
+                {candidate.contact_address && (
+                  <p className="text-gray-700">
+                    <span className="text-gray-400 w-14 inline-block">주소</span>
+                    {candidate.contact_address}
+                  </p>
+                )}
+                {candidate.contact_phone && (
+                  <p className="text-gray-700">
+                    <span className="text-gray-400 w-14 inline-block">연락처</span>
+                    <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
+                      {candidate.contact_phone}
                     </a>
-                  ))}
-                </div>
-              )}
+                  </p>
+                )}
+                {candidate.contact_email && (
+                  <p className="text-gray-700">
+                    <span className="text-gray-400 w-14 inline-block">이메일</span>
+                    <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
+                      {candidate.contact_email}
+                    </a>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </section>
