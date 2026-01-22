@@ -2,90 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* =====================================================
-   폰트 등록
-   ===================================================== */
-
-/* S-Core Dream */
+/* 에스코어드림 폰트 */
 @font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-1Thin.woff') format('woff');
-  font-weight: 100;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-2ExtraLight.woff') format('woff');
-  font-weight: 200;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');
-  font-weight: 300;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-4Regular.woff') format('woff');
-  font-weight: 400;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');
-  font-weight: 500;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');
-  font-weight: 600;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-}
-@font-face {
-  font-family: 'S-Core Dream';
+  font-family: 'S-CoreDream';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff');
   font-weight: 800;
-  font-style: normal;
+  font-display: swap;
 }
+
 @font-face {
-  font-family: 'S-Core Dream';
+  font-family: 'S-CoreDream';
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-9Black.woff') format('woff');
   font-weight: 900;
-  font-style: normal;
+  font-display: swap;
 }
 
-/* Pretendard - CDN */
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+/* 도현 폰트 */
+@import url('https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap');
 
-/* Noto Sans KR - Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap');
-
-/* =====================================================
-   폰트 클래스 (필요시 사용)
-   ===================================================== */
-.font-score {
-  font-family: 'S-Core Dream', sans-serif;
-}
-
-.font-pretendard {
-  font-family: 'Pretendard', sans-serif;
-}
-
-.font-noto {
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-/* =====================================================
-   기본 스타일
-   ===================================================== */
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -95,10 +29,19 @@ html {
 }
 
 body {
-  font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #ffffff;
+}
+
+/* 폰트 클래스 */
+.font-score {
+  font-family: 'S-CoreDream', sans-serif;
+}
+
+.font-dohyeon {
+  font-family: 'Do Hyeon', sans-serif;
 }
 
 /* 모바일 앱 고정 사이즈 - 라운드 없음 */
@@ -128,23 +71,4 @@ body {
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* 애니메이션 */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-up {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
 }

@@ -11,9 +11,13 @@ import {
   Camera,
   X,
   Share2,
+  MapPin,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { supabase, getPartyColor } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
+import PartyHeader from '../components/PartyHeader';
 
 // 확장된 Candidate 타입
 interface CandidateExt {
@@ -81,6 +85,38 @@ interface Cheer {
   created_at: string;
 }
 
+// 섹션 카드 레이아웃 컴포넌트
+function SectionCard({ 
+  title, 
+  partyColor, 
+  rightElement,
+  children 
+}: { 
+  title: string; 
+  partyColor: string; 
+  rightElement?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="px-4 mt-3">
+      <div className="bg-white rounded-2xl shadow-sm">
+        {/* 타이틀 영역 - p-3 */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <h3 className="font-bold flex items-center gap-2">
+            <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+            <span style={{ color: partyColor }}>{title}</span>
+          </h3>
+          {rightElement}
+        </div>
+        {/* 콘텐츠 영역 - px-4 pb-4 */}
+        <div className="px-4 pb-4">
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // FeedItem 컴포넌트 (깜빡임 방지를 위해 외부 정의)
 function FeedItemComponent({ 
   item, 
@@ -92,50 +128,39 @@ function FeedItemComponent({
   formatTime: (dateStr: string) => string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const hasLongContent = item.content && item.content.length > 50;
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm">
-      {/* 상단: 타입 + 제목 + 시간 (한 줄) */}
-      <div className="flex items-center gap-1.5">
-        {item.type === 'activity' ? (
-          <Camera size={14} className="flex-shrink-0" style={{ color: partyColor }} />
-        ) : item.type === 'news' ? (
-          <Newspaper size={14} className="flex-shrink-0" style={{ color: partyColor }} />
-        ) : (
-          <Newspaper size={14} className="flex-shrink-0" style={{ color: partyColor }} />
-        )}
-        <span className="text-xs text-gray-400 flex-shrink-0">
+    <div 
+      className="border-b border-gray-100 last:border-0 pb-3 last:pb-0 cursor-pointer"
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* 첫째줄: 배지 + 제목 + 시간 */}
+      <div className="flex items-center gap-2">
+        <span 
+          className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
+          style={{ backgroundColor: `${partyColor}15`, color: partyColor }}
+        >
           {item.type === 'activity' ? '활동' : item.type === 'news' ? '뉴스' : '공지'}
         </span>
-        <h4 className="font-semibold text-gray-900 text-sm truncate flex-1">{item.title}</h4>
+        <h4 className="font-semibold text-gray-900 flex-1 truncate">{item.title}</h4>
         <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(item.published_at)}</span>
       </div>
 
-      {/* 내용 */}
+      {/* 본문 */}
       {item.content && (
-        <div className="mt-1.5">
-          <p className={`text-sm text-gray-600 ${!expanded && hasLongContent ? 'line-clamp-1' : ''}`}>
-            {item.content}
-          </p>
-          {hasLongContent && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-gray-400 mt-1"
-            >
-              {expanded ? '접기' : '더보기'}
-            </button>
-          )}
-        </div>
+        <p className={`text-sm text-gray-600 mt-1 ${expanded ? '' : 'truncate'}`}>
+          {item.content}
+        </p>
       )}
 
-      {/* 원문 링크 */}
-      {item.source_url && (
+      {/* 원문 링크 - 펼쳤을 때만 */}
+      {expanded && item.source_url && (
         <a
           href={item.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-2 text-xs font-medium"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-block mt-2 text-xs font-medium"
           style={{ color: partyColor }}
         >
           원문 보기 →
@@ -160,7 +185,7 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 
 const FacebookIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    <path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4v-8.5z"/>
   </svg>
 );
 
@@ -209,6 +234,8 @@ export default function CandidatePage() {
   const [showAllIntro, setShowAllIntro] = useState(false);
   const [showAllPledges, setShowAllPledges] = useState(false);
   const [showAllFeeds, setShowAllFeeds] = useState(false);
+  const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
+  const [cheerDisplayCount, setCheerDisplayCount] = useState(5);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -261,7 +288,9 @@ export default function CandidatePage() {
     const trimmed = name.trim();
     if (trimmed.length === 1) return trimmed;
     if (trimmed.length === 2) return trimmed[0] + '*';
-    return trimmed[0] + '*'.repeat(trimmed.length - 2) + trimmed[trimmed.length - 1];
+    // 5자 초과면 5자로 제한 후 마스킹
+    const limited = trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
+    return limited[0] + '*'.repeat(limited.length - 2) + limited[limited.length - 1];
   };
 
   const handleCheerSubmit = async () => {
@@ -396,41 +425,49 @@ export default function CandidatePage() {
       ...SNS_CONFIG[key]
     }));
 
+  // 정당별 헤더 배경 스타일
+  const getHeaderStyle = () => {
+    if (candidate.party_code === 'tmj' || candidate.party === '더불어민주당') {
+      return {
+        background: 'linear-gradient(90deg, #00B050 0%, #00A0E0 50%, #004EA2 100%)'
+      };
+    }
+    return { backgroundColor: partyColor };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* ========== 상단 헤더 (높이 50px) ========== */}
-      <header className="h-[50px] bg-white flex items-center justify-between px-4 pt-5">
-        {candidate.party_logo_url ? (
-          <img 
-            src={candidate.party_logo_url} 
-            alt={candidate.party}
-            className="h-[20px] w-auto object-contain"
-          />
-        ) : (
-          <span 
-            className="text-sm font-bold px-2 py-1 rounded"
-            style={{ backgroundColor: partyColor, color: 'white' }}
-          >
-            {candidate.party}
-          </span>
-        )}
-        {/* SNS 아이콘 */}
-        {activeSns.length > 0 && (
-          <div className="flex gap-4">
-            {activeSns.map(({ key, url, Icon, color }) => (
-              <a
-                key={key}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: color }}
-              >
-                <Icon className="w-3.5 h-3.5 text-white" />
-              </a>
-            ))}
-          </div>
-        )}
+      {/* ========== 상단 헤더 ========== */}
+      <header style={getHeaderStyle()}>
+        <div className="flex items-center justify-between px-4 py-[15px]">
+          {candidate.party_logo_url ? (
+            <img 
+              src={candidate.party_logo_url} 
+              alt={candidate.party}
+              className="h-[20px] w-auto object-contain brightness-0 invert"
+            />
+          ) : (
+            <span className="text-sm font-bold text-white">
+              {candidate.party}
+            </span>
+          )}
+          {/* SNS 아이콘 */}
+          {activeSns.length > 0 && (
+            <div className="flex gap-3">
+              {activeSns.map(({ key, url, Icon }) => (
+                <a
+                  key={key}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-7 h-7 rounded-full flex items-center justify-center bg-white/20"
+                >
+                  <Icon className="w-4 h-4 text-white" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* ========== 히어로 섹션 (16:9) ========== */}
@@ -513,8 +550,11 @@ export default function CandidatePage() {
       {/* ========== 프로필 섹션 (통합: 학력 + 경력 + 인사말) ========== */}
       {(profile?.introduction || totalProfileItems > 0) && (
         <section className="px-4 mt-3">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-3">프로필</h3>
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+              <span style={{ color: partyColor }}>프로필</span>
+            </h3>
             
             {/* 학력 */}
             {educationList.length > 0 && (
@@ -556,14 +596,22 @@ export default function CandidatePage() {
               </div>
             )}
 
-            {/* 인사말 (타이틀 없이) */}
+            {/* 인사말 (드롭캡 스타일) */}
             {profile?.introduction && (
-              <div className="text-sm text-gray-700 leading-relaxed">
+              <div className="text-sm text-gray-700 leading-relaxed mt-6">
                 {showAllProfile ? (
                   <>
-                    <p className="whitespace-pre-line">{profile.introduction}</p>
+                    <p className="whitespace-pre-line">
+                      <span 
+                        className="float-left mr-1.5 flex items-center justify-center text-white"
+                        style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
+                      >
+                        {profile.introduction[0]}
+                      </span>
+                      {profile.introduction.slice(1)}
+                    </p>
                     {/* 이름 + 싸인 */}
-                    <div className="flex items-center justify-center gap-2 mt-4">
+                    <div className="flex items-center justify-center gap-2 mt-4 clear-both">
                       <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
                       {(candidate as any).signature_url && (
                         <img 
@@ -575,7 +623,15 @@ export default function CandidatePage() {
                     </div>
                   </>
                 ) : (
-                  <p className="line-clamp-2">{profile.introduction}</p>
+                  <p className="line-clamp-3">
+                    <span 
+                      className="float-left mr-1.5 flex items-center justify-center text-white"
+                      style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
+                    >
+                      {profile.introduction[0]}
+                    </span>
+                    {profile.introduction.slice(1)}
+                  </p>
                 )}
               </div>
             )}
@@ -600,13 +656,16 @@ export default function CandidatePage() {
       {/* ========== 핵심공약 섹션 (고정) ========== */}
       {pledges.length > 0 && (
         <section className="px-4 mt-3">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-3">핵심공약</h3>
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+              <span style={{ color: partyColor }}>핵심공약</span>
+            </h3>
             <div className="space-y-2.5">
               {(showAllPledges ? pledges : pledges.slice(0, 3)).map((pledge, idx) => (
                 <div key={pledge.id} className="flex items-start gap-2">
                   <div 
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5"
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"
                     style={{ backgroundColor: partyColor, fontSize: '11px', fontWeight: 600 }}
                   >
                     {idx + 1}
@@ -640,87 +699,99 @@ export default function CandidatePage() {
 
       {/* ========== 최근 소식 섹션 ========== */}
       <section className="px-4 mt-4">
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <h3 className="font-bold text-gray-900 mb-3">최근 소식</h3>
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <h3 className="font-bold mb-3 flex items-center gap-2">
+            <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+            <span style={{ color: partyColor }}>최근 소식</span>
+          </h3>
           <div className="space-y-3">
             {feeds.length === 0 ? (
               <p className="text-center text-gray-400 py-4">등록된 소식이 없습니다</p>
             ) : (
-              <>
-                {(showAllFeeds ? feeds : feeds.slice(0, 5)).map((item) => (
-                  <FeedItemComponent 
-                    key={item.id} 
-                    item={item} 
-                    partyColor={partyColor} 
-                    formatTime={formatTime}
-                  />
-                ))}
-                {feeds.length > 5 && (
-                  <button
-                    onClick={() => setShowAllFeeds(!showAllFeeds)}
-                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
-                  >
-                    {showAllFeeds ? '접기' : `더보기 (${feeds.length - 5}개)`}
-                  </button>
-                )}
-              </>
+              feeds.map((item) => (
+                <FeedItemComponent 
+                  key={item.id} 
+                  item={item} 
+                  partyColor={partyColor} 
+                  formatTime={formatTime}
+                />
+              ))
             )}
           </div>
         </div>
       </section>
 
       {/* ========== 응원 메시지 ========== */}
-      <section className="px-4 pb-6">
+      <section className="px-4 pb-6 mt-3">
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900">응원 메시지</h3>
-            <span className="text-xs text-gray-400">{cheers.length}개</span>
+            <h3 className="font-bold flex items-center gap-2">
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+              <span style={{ color: partyColor }}>응원 메시지</span>
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCheerModal(true)}
+                className="px-2.5 py-1 rounded-full text-xs font-medium"
+                style={{ backgroundColor: `${partyColor}15`, color: partyColor }}
+              >
+                + 남기기
+              </button>
+              <span className="text-xs text-gray-400">{cheers.length}개</span>
+            </div>
           </div>
-          <div className="space-y-3 mb-4">
+          <div className="space-y-3">
             {cheers.length === 0 ? (
               <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
-              cheers.slice(0, 5).map((cheer) => (
-                <div key={cheer.id} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                    <User size={16} className="text-gray-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{cheer.name}</span>
-                      <span className="text-xs text-gray-400">{formatTime(cheer.created_at)}</span>
+              <>
+                {cheers.slice(0, cheerDisplayCount).map((cheer) => {
+                  const isExpanded = expandedCheer === cheer.id;
+                  return (
+                    <div 
+                      key={cheer.id} 
+                      className="cursor-pointer flex items-start gap-2"
+                      onClick={() => setExpandedCheer(isExpanded ? null : cheer.id)}
+                    >
+                      <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
+                      <p className={`text-sm text-gray-700 flex-1 min-w-0 ${isExpanded ? '' : 'truncate'}`}>
+                        {cheer.message}
+                      </p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
+                        <button 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                            const { data } = await supabase
+                              .from('cheers')
+                              .select('*')
+                              .eq('candidate_id', candidate.id)
+                              .eq('is_visible', true)
+                              .order('created_at', { ascending: false })
+                              .limit(50);
+                            if (data) setCheers(data);
+                          }}
+                          className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
+                        >
+                          <Heart size={12} />
+                          <span className="text-xs">{cheer.likes_count || 0}</span>
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 truncate">{cheer.message}</p>
-                  </div>
-                  <button 
-                    onClick={async () => {
-                      await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
-                      const { data } = await supabase
-                        .from('cheers')
-                        .select('*')
-                        .eq('candidate_id', candidate.id)
-                        .eq('is_visible', true)
-                        .order('created_at', { ascending: false })
-                        .limit(10);
-                      if (data) setCheers(data);
-                    }}
-                    className="flex items-center gap-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                  );
+                })}
+                {cheers.length > cheerDisplayCount && (
+                  <button
+                    onClick={() => setCheerDisplayCount(prev => prev + 5)}
+                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
                   >
-                    <Heart size={14} />
-                    <span className="text-xs">{cheer.likes_count || 0}</span>
+                    응원 더보기 ({cheers.length - cheerDisplayCount}개)
                   </button>
-                </div>
-              ))
+                )}
+              </>
             )}
           </div>
-          <button 
-            onClick={() => setShowCheerModal(true)}
-            className="w-full py-3 rounded-xl font-medium text-sm border-2 flex items-center justify-center gap-2"
-            style={{ borderColor: partyColor, color: partyColor }}
-          >
-            <Heart size={16} />
-            응원 메시지 남기기
-          </button>
         </div>
       </section>
 
@@ -730,22 +801,22 @@ export default function CandidatePage() {
           <h3 className="font-bold text-gray-900 mb-3 text-sm">선거운동 연락사무소</h3>
           <div className="space-y-2 text-sm">
             {candidate.contact_address && (
-              <p className="text-gray-600">
-                <span className="text-gray-400 w-12 inline-block">주소</span>
-                {candidate.contact_address}
+              <p className="text-gray-600 flex items-start gap-2">
+                <MapPin size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                <span>{candidate.contact_address}</span>
               </p>
             )}
             {candidate.contact_phone && (
-              <p className="text-gray-600">
-                <span className="text-gray-400 w-12 inline-block">전화</span>
+              <p className="text-gray-600 flex items-center gap-2">
+                <Phone size={16} className="text-gray-400 flex-shrink-0" />
                 <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
                   {candidate.contact_phone}
                 </a>
               </p>
             )}
             {candidate.contact_email && (
-              <p className="text-gray-600">
-                <span className="text-gray-400 w-12 inline-block">이메일</span>
+              <p className="text-gray-600 flex items-center gap-2">
+                <Mail size={16} className="text-gray-400 flex-shrink-0" />
                 <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
                   {candidate.contact_email}
                 </a>
@@ -778,14 +849,6 @@ export default function CandidatePage() {
         >
           <Share2 size={20} />
         </button>
-        {/* 응원 버튼 */}
-        <button 
-          onClick={() => setShowCheerModal(true)}
-          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center bg-white border-2"
-          style={{ borderColor: partyColor, color: partyColor }}
-        >
-          <Heart size={20} />
-        </button>
       </div>
 
       {/* ========== 응원 모달 ========== */}
@@ -795,16 +858,15 @@ export default function CandidatePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
             onClick={() => setShowCheerModal(false)}
           >
             <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full rounded-t-3xl p-6"
-              style={{ maxWidth: '430px', margin: '0 auto' }}
+              className="bg-white w-full max-w-sm rounded-2xl p-6"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg">응원 메시지</h3>
@@ -825,7 +887,6 @@ export default function CandidatePage() {
                 placeholder="후보자에게 응원 메시지를 남겨주세요!"
                 className="w-full h-28 p-4 bg-gray-50 rounded-xl resize-none focus:outline-none focus:ring-2"
               />
-              <p className="text-xs text-gray-400 mt-2">* 이름은 김*석 형태로 표시됩니다</p>
               <button 
                 onClick={handleCheerSubmit}
                 className="w-full mt-4 py-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2"

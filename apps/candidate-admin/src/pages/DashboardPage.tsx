@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Candidate } from '../lib/supabase';
-import { Eye, Heart, Newspaper, ChevronRight, ExternalLink, Download } from 'lucide-react';
+import { Eye, Heart, Newspaper, ChevronRight, ExternalLink, Download, Camera, Megaphone } from 'lucide-react';
 
 interface DashboardPageProps {
   candidateId: string;
@@ -14,7 +14,9 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
     totalVisits: 0,
     todayVisits: 0,
     cheers: 0,
+    totalLikes: 0,
     feeds: 0,
+    feedsByType: { activity: 0, news: 0, notice: 0 },
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,15 +36,28 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
       const [totalVisitsRes, todayVisitsRes, cheersRes, feedsRes] = await Promise.all([
         supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
         supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId).gte('visited_at', today.toISOString()),
-        supabase.from('cheers').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
-        supabase.from('feeds').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
+        supabase.from('cheers').select('id, likes_count').eq('candidate_id', candidateId),
+        supabase.from('feeds').select('id, type').eq('candidate_id', candidateId),
       ]);
+
+      // 좋아요 합계
+      const totalLikes = cheersRes.data?.reduce((sum, c) => sum + (c.likes_count || 0), 0) || 0;
+
+      // 소식 타입별 카운트
+      const feedsByType = { activity: 0, news: 0, notice: 0 };
+      feedsRes.data?.forEach(f => {
+        if (f.type === 'activity') feedsByType.activity++;
+        else if (f.type === 'news') feedsByType.news++;
+        else if (f.type === 'notice') feedsByType.notice++;
+      });
 
       setStats({
         totalVisits: totalVisitsRes.count || 0,
         todayVisits: todayVisitsRes.count || 0,
-        cheers: cheersRes.count || 0,
-        feeds: feedsRes.count || 0,
+        cheers: cheersRes.data?.length || 0,
+        totalLikes,
+        feeds: feedsRes.data?.length || 0,
+        feedsByType,
       });
 
       setLoading(false);
@@ -128,50 +143,45 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
             </div>
           </div>
 
-          {/* 통계 카드 그리드 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Eye size={24} className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalVisits}</p>
-                  <p className="text-xs text-gray-500">총 방문자</p>
-                </div>
+          {/* 통계 카드 (1/4 + 1/4 + 2/4) */}
+          <div className="flex gap-4">
+            {/* 방문자 (1/4) */}
+            <div className="flex-1 bg-white rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye size={18} className="text-blue-600" />
+                <span className="text-xs text-gray-500">오늘 방문자</span>
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.todayVisits}</p>
+              <p className="text-xs text-gray-400 mt-1">누적 {stats.totalVisits.toLocaleString()}</p>
             </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Eye size={24} className="text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.todayVisits}</p>
-                  <p className="text-xs text-gray-500">오늘 방문자</p>
-                </div>
+
+            {/* 응원 (1/4) */}
+            <div className="flex-1 bg-white rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Heart size={18} className="text-red-500" />
+                <span className="text-xs text-gray-500">응원 메시지</span>
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.cheers}</p>
+              <p className="text-xs text-gray-400 mt-1">❤️ {stats.totalLikes}</p>
             </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <Heart size={24} className="text-red-500" />
+
+            {/* 소식 (2/4) */}
+            <div 
+              className="flex-[2] bg-white rounded-2xl p-5 border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => navigate('/feeds')}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Newspaper size={18} className="text-green-600" />
+                  <span className="text-xs text-gray-500">등록 소식</span>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.cheers}</p>
-                  <p className="text-xs text-gray-500">총 응원</p>
-                </div>
+                <ChevronRight size={18} className="text-gray-400" />
               </div>
-            </div>
-            <div className="bg-white rounded-2xl p-5 border border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Newspaper size={24} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.feeds}</p>
-                  <p className="text-xs text-gray-500">등록 소식</p>
-                </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.feeds}</p>
+              <div className="flex gap-3 mt-1">
+                <span className="text-xs text-gray-400">활동 {stats.feedsByType.activity}</span>
+                <span className="text-xs text-gray-400">뉴스 {stats.feedsByType.news}</span>
+                <span className="text-xs text-gray-400">공지 {stats.feedsByType.notice}</span>
               </div>
             </div>
           </div>
