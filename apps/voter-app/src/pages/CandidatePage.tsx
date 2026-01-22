@@ -436,7 +436,7 @@ export default function CandidatePage() {
             </div>
             {/* 우측: 연락처 정보 */}
             <div className="flex-1 text-sm">
-              <p className="text-xs font-semibold text-gray-500 mb-2">선거운동 연락사무소</p>
+              <h3 className="font-bold text-gray-900 mb-2">선거운동 연락사무소</h3>
               <div className="space-y-1">
                 {candidate.contact_address && (
                   <p className="text-gray-700">
