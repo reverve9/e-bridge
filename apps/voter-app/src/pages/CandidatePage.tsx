@@ -1024,21 +1024,22 @@ export default function CandidatePage() {
             const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
             now.setHours(0, 0, 0, 0);
             const diffDays = Math.max(0, Math.ceil((voteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-            const isUrgent = diffDays <= 7;
+            const isUrgent = diffDays <= 20;
             
             return (
               <div className="w-1/4 flex flex-col items-center justify-center border-r border-gray-100 pr-4">
+                <span className="text-xs text-gray-400">투표일까지</span>
                 <span 
-                  className="text-2xl"
+                  className="text-2xl my-0.5"
                   style={{ 
                     fontFamily: "'S-CoreDream', sans-serif", 
                     fontWeight: 800,
                     color: isUrgent ? '#EF4444' : '#1F2937'
                   }}
                 >
-                  D-{diffDays}
+                  {diffDays}
                 </span>
-                <span className="text-xs text-gray-400 mt-1">2026.6.3(수)</span>
+                <span className="text-xs text-gray-400">2026.6.3(수)</span>
               </div>
             );
           })()}
