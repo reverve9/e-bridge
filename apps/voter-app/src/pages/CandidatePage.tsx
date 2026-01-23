@@ -271,13 +271,20 @@ export default function CandidatePage() {
     return () => clearInterval(interval);
   }, [candidate]);
 
-  // 응원 메시지 롤링 (3초마다, 6개 이상일 때만)
+  // 응원 메시지 롤링 (5초마다, 6개 이상일 때만)
   useEffect(() => {
     if (cheers.length <= 5) return;
     
     const interval = setInterval(() => {
-      setCheerStartIndex((prev) => (prev + 1) % cheers.length);
-    }, 3000);
+      setCheerStartIndex((prev) => {
+        const next = prev + 1;
+        // 원본 리스트 끝에 도달하면 리셋 (무한 롤링)
+        if (next >= cheers.length) {
+          return 0;
+        }
+        return next;
+      });
+    }, 5000);
     
     return () => clearInterval(interval);
   }, [cheers.length]);
@@ -871,7 +878,7 @@ export default function CandidatePage() {
               <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
               <div 
-                className="transition-transform duration-500 ease-in-out"
+                className={cheerStartIndex === 0 ? '' : 'transition-transform duration-700 ease-in-out'}
                 style={{ transform: `translateY(-${cheerStartIndex * 36}px)` }}
               >
                 {[...cheers, ...cheers.slice(0, 5)].map((cheer, idx) => {
