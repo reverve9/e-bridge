@@ -8,6 +8,7 @@ const CLASSIC_COLORS: ThemeColors = {
   background: '#F5F5F5',      // bg-gray-50 대응
   cardBg: '#FFFFFF',          // bg-white
   cardBgHover: '#F9FAFB',     // hover:bg-gray-50
+  cardBgAlt: '#F3F4F6',       // bg-gray-100
   
   // 텍스트 (gray 계열)
   textPrimary: '#111827',     // text-gray-900
@@ -44,10 +45,11 @@ const DARK_COLORS: ThemeColors = {
   background: '#0F172A',      // slate-900
   cardBg: '#1E293B',          // slate-800
   cardBgHover: '#334155',     // slate-700
+  cardBgAlt: '#334155',       // slate-700
   
   // 텍스트
   textPrimary: '#F1F5F9',     // slate-100
-  textSecondary: '#94A3B8',   // slate-400
+  textSecondary: '#CBD5E1',   // slate-300 (더 밝게 수정)
   textMuted: '#64748B',       // slate-500
   textInverse: '#0F172A',
   

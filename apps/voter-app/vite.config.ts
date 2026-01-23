@@ -34,6 +34,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@e-bridge/ui': path.resolve(__dirname, '../../packages/ui/src'),
     },
   },
 });

@@ -20,167 +20,20 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
+import { 
+  Theme, 
+  ThemeMode, 
+  PartyCode, 
+  ThemeColors,
+  createTheme, 
+  getPartyCode 
+} from '@e-bridge/ui';
 
 // ========================================
-// 테마 시스템 (packages/ui에서 가져오되, 빌드 이슈 방지를 위해 인라인)
+// 테마 헬퍼 함수
 // ========================================
-type ThemeMode = 'classic' | 'dark';
-type PartyCode = 'dmj' | 'ppp' | 'ind';
-
-interface ThemeColors {
-  primary: string;
-  primaryLight: string;
-  primaryDark: string;
-  primaryText: string;
-  secondary: string;
-  background: string;
-  cardBg: string;
-  cardBgAlt: string;
-  textPrimary: string;
-  textSecondary: string;
-  textMuted: string;
-  textInverse: string;
-  border: string;
-  borderLight: string;
-  overlay: string;
-}
-
-interface HeaderStyle {
-  background: string;
-  textColor: string;
-  iconBgColor: string;
-}
-
-interface Theme {
-  mode: ThemeMode;
-  party: PartyCode;
-  partyName: string;
-  colors: ThemeColors;
-  header: HeaderStyle;
-  isDark: boolean;
-}
-
-// Classic 색상 (현재 하드코딩된 값 그대로)
-const CLASSIC_BASE: Omit<ThemeColors, 'primary' | 'primaryLight' | 'primaryDark' | 'primaryText' | 'secondary'> = {
-  background: '#F9FAFB',     // bg-gray-50
-  cardBg: '#FFFFFF',         // bg-white
-  cardBgAlt: '#F3F4F6',      // bg-gray-100
-  textPrimary: '#111827',    // text-gray-900
-  textSecondary: '#4B5563',  // text-gray-600
-  textMuted: '#9CA3AF',      // text-gray-400
-  textInverse: '#FFFFFF',
-  border: '#E5E7EB',         // border-gray-200
-  borderLight: '#F3F4F6',    // border-gray-100
-  overlay: 'rgba(0, 0, 0, 0.5)',
-};
-
-// Dark 색상
-const DARK_BASE: Omit<ThemeColors, 'primary' | 'primaryLight' | 'primaryDark' | 'primaryText' | 'secondary'> = {
-  background: '#0F172A',
-  cardBg: '#1E293B',
-  cardBgAlt: '#334155',
-  textPrimary: '#F1F5F9',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textInverse: '#0F172A',
-  border: '#334155',
-  borderLight: '#1E293B',
-  overlay: 'rgba(0, 0, 0, 0.7)',
-};
-
-// 정당별 브랜드 컬러
-const PARTY_BRAND = {
-  dmj: {
-    classic: { primary: '#004EA2', primaryLight: '#E8F0FA', primaryDark: '#003670', secondary: '#0073E6' },
-    dark: { primary: '#4D9FFF', primaryLight: '#1E3A5F', primaryDark: '#003366', secondary: '#6BB8FF' },
-  },
-  ppp: {
-    classic: { primary: '#E61E2B', primaryLight: '#FDECEE', primaryDark: '#B8161F', secondary: '#00B5E2' },
-    dark: { primary: '#FF6B78', primaryLight: '#3D1A1D', primaryDark: '#990011', secondary: '#00B5E2' },
-  },
-  ind: {
-    classic: { primary: '#6B7280', primaryLight: '#F3F4F6', primaryDark: '#4B5563', secondary: '#9CA3AF' },
-    dark: { primary: '#A1A1AA', primaryLight: '#27272A', primaryDark: '#52525B', secondary: '#D4D4D8' },
-  },
-};
-
-// 정당별 헤더 스타일
-const PARTY_HEADERS: Record<PartyCode, Record<ThemeMode, HeaderStyle>> = {
-  dmj: {
-    classic: {
-      background: 'linear-gradient(90deg, #00B050 0%, #00A0E0 50%, #004EA2 100%)',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    dark: {
-      background: 'linear-gradient(90deg, #006030 0%, #006090 50%, #003670 100%)',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
-    },
-  },
-  ppp: {
-    classic: {
-      background: '#E61E2B',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    dark: {
-      background: '#8B1118',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
-    },
-  },
-  ind: {
-    classic: {
-      background: '#6B7280',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    dark: {
-      background: '#374151',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
-    },
-  },
-};
-
-const PARTY_CODE_MAP: Record<string, PartyCode> = {
-  '더불어민주당': 'dmj',
-  '국민의힘': 'ppp',
-  '무소속': 'ind',
-};
-
-const PARTY_NAMES: Record<PartyCode, string> = {
-  dmj: '더불어민주당',
-  ppp: '국민의힘',
-  ind: '무소속',
-};
-
-function createTheme(partyCode: PartyCode, mode: ThemeMode): Theme {
-  const isDark = mode === 'dark';
-  const base = isDark ? DARK_BASE : CLASSIC_BASE;
-  const brand = PARTY_BRAND[partyCode]?.[mode] || PARTY_BRAND.ind[mode];
-  const header = PARTY_HEADERS[partyCode]?.[mode] || PARTY_HEADERS.ind[mode];
-
-  return {
-    mode,
-    party: partyCode,
-    partyName: PARTY_NAMES[partyCode] || '무소속',
-    colors: {
-      ...base,
-      primary: brand.primary,
-      primaryLight: brand.primaryLight,
-      primaryDark: brand.primaryDark,
-      primaryText: '#FFFFFF',
-      secondary: brand.secondary,
-    },
-    header,
-    isDark,
-  };
-}
-
 function getTheme(partyName: string, themeMode: string | null): Theme {
-  const partyCode = PARTY_CODE_MAP[partyName] || 'ind';
+  const partyCode = getPartyCode(partyName);
   const mode: ThemeMode = themeMode === 'dark' ? 'dark' : 'classic';
   return createTheme(partyCode, mode);
 }
@@ -789,13 +642,13 @@ export default function CandidatePage() {
                 </div>
               )}
 
-              {/* QR코드 (우측 하단) */}
+              {/* QR코드 (우측 하단) - 항상 흰색 배경 */}
               <div className="absolute bottom-10 right-6 z-10">
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
                   alt="QR코드"
                   className="w-[72px] h-[72px] rounded-lg p-1 shadow-lg"
-                  style={{ backgroundColor: c.cardBg }}
+                  style={{ backgroundColor: '#FFFFFF' }}
                 />
               </div>
 
@@ -803,7 +656,7 @@ export default function CandidatePage() {
                 {candidate.slogan && (
                   <p 
                     className="font-score"
-                    style={{ fontSize: '16px', fontWeight: 700, color: c.textInverse }}
+                    style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF' }}
                   >
                     {candidate.slogan}
                   </p>

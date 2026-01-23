@@ -17,6 +17,7 @@ export interface ThemeColors {
   background: string;       // 페이지 배경
   cardBg: string;           // 카드 배경
   cardBgHover: string;      // 카드 호버
+  cardBgAlt: string;        // 대체 카드 배경 (약간 더 어둡거나 밝은)
   
   // 텍스트
   textPrimary: string;      // 기본 텍스트
