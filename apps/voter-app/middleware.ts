@@ -1,5 +1,3 @@
-import { next } from '@vercel/edge';
-
 const CRAWLER_PATTERNS = [
   'kakaotalk',
   'facebookexternalhit',
@@ -22,7 +20,7 @@ export default function middleware(request: Request) {
   
   // partyCode/candidateCode 형태만 처리
   if (pathParts.length !== 2) {
-    return next();
+    return;
   }
   
   const [partyCode, candidateCode] = pathParts;
@@ -30,7 +28,7 @@ export default function middleware(request: Request) {
   // 유효한 partyCode 패턴 확인 (tmj, ppp 등)
   const validPartyCodes = ['tmj', 'ppp', 'gnp', 'jnp', 'prp', 'ind'];
   if (!validPartyCodes.includes(partyCode)) {
-    return next();
+    return;
   }
 
   const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
@@ -38,8 +36,9 @@ export default function middleware(request: Request) {
 
   if (isCrawler) {
     // 크롤러면 OG API로 rewrite
-    return Response.redirect(new URL(`/api/og?party=${partyCode}&code=${candidateCode}`, request.url), 307);
+    const ogUrl = new URL(`/api/og?party=${partyCode}&code=${candidateCode}`, request.url);
+    return Response.redirect(ogUrl.toString(), 307);
   }
 
-  return next();
+  return;
 }
