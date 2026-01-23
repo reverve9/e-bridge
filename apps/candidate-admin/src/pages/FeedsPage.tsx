@@ -18,6 +18,10 @@ interface FeedsPageProps {
   candidateId: string;
 }
 
+// Supabase URL에서 Edge Function URL 생성
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/generate-summary`;
+
 export default function FeedsPage({ candidateId }: FeedsPageProps) {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +69,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
     setShowModal(true);
   };
 
-  // AI 요약 생성
+  // AI 요약 생성 (Edge Function 사용)
   const generateSummary = async () => {
     if (!formData.content.trim() || formData.content.length < 20) {
       alert('요약할 내용이 너무 짧습니다.');
@@ -74,33 +78,26 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
 
     setSummarizing(true);
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(EDGE_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 100,
-          messages: [
-            {
-              role: 'user',
-              content: `다음 선거 후보자의 소식/활동 내용을 뉴스 부제목 스타일로 한 줄(30자 이내)로 요약해주세요. 핵심 키워드 중심으로 간결하게 작성해주세요.
-
-제목: ${formData.title}
-내용: ${formData.content}
-
-요약:`
-            }
-          ]
+          title: formData.title,
+          content: formData.content,
         })
       });
 
       const data = await response.json();
-      const summary = data.content?.[0]?.text?.trim() || '';
       
-      if (summary) {
-        setFormData({ ...formData, summary });
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data.summary) {
+        setFormData({ ...formData, summary: data.summary });
       }
     } catch (error) {
       console.error('요약 생성 실패:', error);
