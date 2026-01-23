@@ -599,40 +599,45 @@ export default function CandidatePage() {
             {/* 인사말 (드롭캡 스타일) */}
             {profile?.introduction && (
               <div className="text-sm text-gray-700 leading-relaxed mt-6">
-                {showAllProfile ? (
-                  <>
-                    <p className="whitespace-pre-line">
+                {(() => {
+                  const intro = profile.introduction;
+                  const truncatedIntro = intro.length > 95 ? intro.slice(0, 95) + '...' : intro;
+                  
+                  return showAllProfile ? (
+                    <>
+                      <p className="whitespace-pre-line">
+                        <span 
+                          className="float-left mr-1.5 flex items-center justify-center text-white"
+                          style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
+                        >
+                          {intro[0]}
+                        </span>
+                        {intro.slice(1)}
+                      </p>
+                      {/* 이름 + 싸인 */}
+                      <div className="flex items-center justify-center gap-2 mt-4 clear-both">
+                        <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
+                        {(candidate as any).signature_url && (
+                          <img 
+                            src={(candidate as any).signature_url} 
+                            alt="싸인" 
+                            className="h-8 object-contain"
+                          />
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p>
                       <span 
                         className="float-left mr-1.5 flex items-center justify-center text-white"
                         style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
                       >
-                        {profile.introduction[0]}
+                        {intro[0]}
                       </span>
-                      {profile.introduction.slice(1)}
+                      {truncatedIntro.slice(1)}
                     </p>
-                    {/* 이름 + 싸인 */}
-                    <div className="flex items-center justify-center gap-2 mt-4 clear-both">
-                      <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
-                      {(candidate as any).signature_url && (
-                        <img 
-                          src={(candidate as any).signature_url} 
-                          alt="싸인" 
-                          className="h-8 object-contain"
-                        />
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p className="line-clamp-3">
-                    <span 
-                      className="float-left mr-1.5 flex items-center justify-center text-white"
-                      style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
-                    >
-                      {profile.introduction[0]}
-                    </span>
-                    {profile.introduction.slice(1)}
-                  </p>
-                )}
+                  );
+                })()}
               </div>
             )}
 
