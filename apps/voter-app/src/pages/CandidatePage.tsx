@@ -230,6 +230,7 @@ export default function CandidatePage() {
   const [cheers, setCheers] = useState<Cheer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCheerModal, setShowCheerModal] = useState(false);
+  const [showCheerCompleteModal, setShowCheerCompleteModal] = useState(false);
   const [cheerName, setCheerName] = useState('');
   const [cheerMessage, setCheerMessage] = useState('');
   
@@ -360,14 +361,14 @@ export default function CandidatePage() {
     setCheerName('');
     setCheerMessage('');
     setShowCheerModal(false);
+    setShowCheerCompleteModal(true);
     
     const { data } = await supabase
       .from('cheers')
       .select('*')
       .eq('candidate_id', candidate.id)
       .eq('is_visible', true)
-      .order('created_at', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false });
     if (data) setCheers(data);
   };
 
@@ -1109,6 +1110,74 @@ export default function CandidatePage() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== 응원 완료 + 공유 모달 ========== */}
+      <AnimatePresence>
+        {showCheerCompleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+            onClick={() => setShowCheerCompleteModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-sm rounded-2xl p-6 text-center"
+            >
+              <div 
+                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{ backgroundColor: `${partyColor}20` }}
+              >
+                <Heart size={32} style={{ color: partyColor }} fill={partyColor} />
+              </div>
+              <h3 className="font-bold text-xl mb-2">응원 완료! 🎉</h3>
+              <p className="text-gray-500 mb-6">
+                {candidate.name} 후보에게 응원이 전달되었어요.<br />
+                친구들에게도 알려주세요!
+              </p>
+              
+              <button
+                onClick={() => {
+                  const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`;
+                  const shareText = `나도 ${candidate.candidate_number} ${candidate.name} 후보를 응원했어요! 🎉`;
+                  const kakaoUrl = `https://story.kakao.com/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+                  window.open(kakaoUrl, '_blank', 'width=600,height=400');
+                }}
+                className="w-full py-3.5 rounded-xl font-semibold text-amber-900 flex items-center justify-center gap-2 mb-3"
+                style={{ backgroundColor: '#FEE500' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.89 5.29 4.68 6.68l-.86 3.18c-.1.37.32.68.65.48l3.89-2.57c.53.07 1.07.1 1.64.1 5.52 0 10-3.58 10-8s-4.48-8-10-8z"/>
+                </svg>
+                카카오톡으로 공유하기
+              </button>
+              
+              <button
+                onClick={() => {
+                  const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`;
+                  navigator.clipboard.writeText(shareUrl);
+                  alert('링크가 복사되었습니다!');
+                }}
+                className="w-full py-3.5 rounded-xl font-semibold text-gray-700 bg-gray-100 flex items-center justify-center gap-2"
+              >
+                <Share2 size={18} />
+                링크 복사
+              </button>
+              
+              <button
+                onClick={() => setShowCheerCompleteModal(false)}
+                className="mt-4 text-sm text-gray-400"
+              >
+                닫기
+              </button>
             </motion.div>
           </motion.div>
         )}
