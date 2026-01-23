@@ -984,14 +984,15 @@ export default function CandidatePage() {
         {/* 공유 버튼 */}
         <button 
           onClick={() => {
+            const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`;
             if (navigator.share) {
               navigator.share({
-                title: `${candidate.name} 후보`,
-                text: candidate.slogan || `${candidate.name} 후보를 소개합니다`,
-                url: window.location.href,
+                title: `${candidate.candidate_number} ${candidate.name}`,
+                text: candidate.slogan ? `${candidate.slogan}\n${shareUrl}` : shareUrl,
+                url: shareUrl,
               });
             } else {
-              navigator.clipboard.writeText(window.location.href);
+              navigator.clipboard.writeText(shareUrl);
               alert('링크가 복사되었습니다!');
             }
           }}
