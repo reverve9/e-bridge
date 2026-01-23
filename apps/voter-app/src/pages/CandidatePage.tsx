@@ -241,6 +241,7 @@ export default function CandidatePage() {
   const [showAllFeeds, setShowAllFeeds] = useState(false);
   const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
+  const [cheerStartIndex, setCheerStartIndex] = useState(0);
   
   // 프로필/인사말 탭 상태
   const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
@@ -269,6 +270,17 @@ export default function CandidatePage() {
     
     return () => clearInterval(interval);
   }, [candidate]);
+
+  // 응원 메시지 롤링 (3초마다, 6개 이상일 때만)
+  useEffect(() => {
+    if (cheers.length <= 5) return;
+    
+    const interval = setInterval(() => {
+      setCheerStartIndex((prev) => (prev + 1) % cheers.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [cheers.length]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -854,45 +866,50 @@ export default function CandidatePage() {
               <span className="text-xs text-gray-400">{cheers.length}개</span>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="relative overflow-hidden" style={{ height: cheers.length === 0 ? 'auto' : `${Math.min(cheers.length, 5) * 36}px` }}>
             {cheers.length === 0 ? (
               <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
-              cheers.slice(0, 5).map((cheer) => {
-                const isExpanded = expandedCheer === cheer.id;
-                return (
-                  <div 
-                    key={cheer.id} 
-                    className="cursor-pointer flex items-start gap-2"
-                    onClick={() => setExpandedCheer(isExpanded ? null : cheer.id)}
-                  >
-                    <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
-                    <p className={`text-sm text-gray-700 flex-1 min-w-0 ${isExpanded ? '' : 'truncate'}`}>
-                      {cheer.message}
-                    </p>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
-                      <button 
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
-                          const { data } = await supabase
-                            .from('cheers')
-                            .select('*')
-                            .eq('candidate_id', candidate.id)
-                            .eq('is_visible', true)
-                            .order('created_at', { ascending: false });
-                          if (data) setCheers(data);
-                        }}
-                        className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
-                      >
-                        <Heart size={12} />
-                        <span className="text-xs">{cheer.likes_count || 0}</span>
-                      </button>
+              <div 
+                className="transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateY(-${cheerStartIndex * 36}px)` }}
+              >
+                {[...cheers, ...cheers.slice(0, 5)].map((cheer, idx) => {
+                  const isExpanded = expandedCheer === `${cheer.id}-${idx}`;
+                  return (
+                    <div 
+                      key={`${cheer.id}-${idx}`}
+                      className="cursor-pointer flex items-start gap-2 h-9"
+                      onClick={() => setExpandedCheer(isExpanded ? null : `${cheer.id}-${idx}`)}
+                    >
+                      <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
+                      <p className={`text-sm text-gray-700 flex-1 min-w-0 ${isExpanded ? '' : 'truncate'}`}>
+                        {cheer.message}
+                      </p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
+                        <button 
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                            const { data } = await supabase
+                              .from('cheers')
+                              .select('*')
+                              .eq('candidate_id', candidate.id)
+                              .eq('is_visible', true)
+                              .order('created_at', { ascending: false });
+                            if (data) setCheers(data);
+                          }}
+                          className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
+                        >
+                          <Heart size={12} />
+                          <span className="text-xs">{cheer.likes_count || 0}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -1134,7 +1151,7 @@ export default function CandidatePage() {
               
               <button
                 onClick={() => {
-                  const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}?cheer=1`;
+                  const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`;
                   const shareText = `나도 ${candidate.candidate_number} ${candidate.name} 후보를 응원했어요! 🎉`;
                   
                   if (navigator.share) {

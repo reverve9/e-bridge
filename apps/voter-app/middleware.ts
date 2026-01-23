@@ -35,12 +35,7 @@ export default function middleware(request: Request) {
   const isCrawler = CRAWLER_PATTERNS.some(pattern => userAgent.includes(pattern));
 
   if (isCrawler) {
-    // cheer 파라미터 전달
-    const cheer = url.searchParams.get('cheer');
-    let ogPath = `/api/og?party=${partyCode}&code=${candidateCode}`;
-    if (cheer === '1') ogPath += '&cheer=1';
-    
-    const ogUrl = new URL(ogPath, request.url);
+    const ogUrl = new URL(`/api/og?party=${partyCode}&code=${candidateCode}`, request.url);
     return Response.redirect(ogUrl.toString(), 307);
   }
 
