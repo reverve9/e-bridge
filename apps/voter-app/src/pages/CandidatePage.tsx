@@ -601,7 +601,7 @@ export default function CandidatePage() {
               <div className="text-sm text-gray-700 leading-relaxed mt-6">
                 {(() => {
                   const intro = profile.introduction;
-                  const truncatedIntro = intro.length > 90 ? intro.slice(0, 90) + '...' : intro;
+                  const truncatedIntro = intro.length > 93 ? intro.slice(0, 93) + '...' : intro;
                   
                   return showAllProfile ? (
                     <>
