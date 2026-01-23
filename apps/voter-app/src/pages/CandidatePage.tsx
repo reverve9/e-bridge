@@ -231,6 +231,7 @@ export default function CandidatePage() {
   const [loading, setLoading] = useState(true);
   const [showCheerModal, setShowCheerModal] = useState(false);
   const [showCheerCompleteModal, setShowCheerCompleteModal] = useState(false);
+  const [selectedCheer, setSelectedCheer] = useState<Cheer | null>(null);
   const [cheerName, setCheerName] = useState('');
   const [cheerMessage, setCheerMessage] = useState('');
   
@@ -239,7 +240,6 @@ export default function CandidatePage() {
   const [showAllIntro, setShowAllIntro] = useState(false);
   const [showAllPledges, setShowAllPledges] = useState(false);
   const [showAllFeeds, setShowAllFeeds] = useState(false);
-  const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   const [cheerStartIndex, setCheerStartIndex] = useState(0);
   
@@ -271,7 +271,7 @@ export default function CandidatePage() {
     return () => clearInterval(interval);
   }, [candidate]);
 
-  // 응원 메시지 롤링 (5초마다, 6개 이상일 때만)
+  // 응원 메시지 롤링 (4초마다, 6개 이상일 때만)
   useEffect(() => {
     if (cheers.length <= 5) return;
     
@@ -284,7 +284,7 @@ export default function CandidatePage() {
         }
         return next;
       });
-    }, 5000);
+    }, 4000);
     
     return () => clearInterval(interval);
   }, [cheers.length]);
@@ -881,41 +881,38 @@ export default function CandidatePage() {
                 className={cheerStartIndex === 0 ? '' : 'transition-transform duration-700 ease-in-out'}
                 style={{ transform: `translateY(-${cheerStartIndex * 36}px)` }}
               >
-                {[...cheers, ...cheers.slice(0, 5)].map((cheer, idx) => {
-                  const isExpanded = expandedCheer === `${cheer.id}-${idx}`;
-                  return (
-                    <div 
-                      key={`${cheer.id}-${idx}`}
-                      className="cursor-pointer flex items-start gap-2 h-9"
-                      onClick={() => setExpandedCheer(isExpanded ? null : `${cheer.id}-${idx}`)}
-                    >
-                      <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
-                      <p className={`text-sm text-gray-700 flex-1 min-w-0 ${isExpanded ? '' : 'truncate'}`}>
-                        {cheer.message}
-                      </p>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
-                        <button 
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
-                            const { data } = await supabase
-                              .from('cheers')
-                              .select('*')
-                              .eq('candidate_id', candidate.id)
-                              .eq('is_visible', true)
-                              .order('created_at', { ascending: false });
-                            if (data) setCheers(data);
-                          }}
-                          className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
-                        >
-                          <Heart size={12} />
-                          <span className="text-xs">{cheer.likes_count || 0}</span>
-                        </button>
-                      </div>
+                {[...cheers, ...cheers.slice(0, 5)].map((cheer, idx) => (
+                  <div 
+                    key={`${cheer.id}-${idx}`}
+                    className="flex items-center gap-2 h-9 cursor-pointer"
+                    onClick={() => setSelectedCheer(cheer)}
+                  >
+                    <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
+                    <p className="text-sm text-gray-700 flex-1 min-w-0 truncate">
+                      {cheer.message}
+                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                          const { data } = await supabase
+                            .from('cheers')
+                            .select('*')
+                            .eq('candidate_id', candidate.id)
+                            .eq('is_visible', true)
+                            .order('created_at', { ascending: false });
+                          if (data) setCheers(data);
+                        }}
+                        className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
+                      >
+                        <Heart size={12} />
+                        <span className="text-xs">{cheer.likes_count || 0}</span>
+                      </button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1200,6 +1197,62 @@ export default function CandidatePage() {
               >
                 닫기
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== 응원 메시지 상세 모달 ========== */}
+      <AnimatePresence>
+        {selectedCheer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+            onClick={() => setSelectedCheer(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-sm rounded-2xl p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className="font-bold text-lg text-gray-900">{selectedCheer.name}</span>
+                <button onClick={() => setSelectedCheer(null)}>
+                  <X size={24} className="text-gray-400" />
+                </button>
+              </div>
+              
+              <p className="text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">
+                {selectedCheer.message}
+              </p>
+              
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="text-gray-400 text-sm">{formatTime(selectedCheer.created_at)}</span>
+                <button 
+                  onClick={async () => {
+                    await supabase.rpc('increment_cheer_likes', { cheer_id: selectedCheer.id });
+                    const { data } = await supabase
+                      .from('cheers')
+                      .select('*')
+                      .eq('candidate_id', candidate.id)
+                      .eq('is_visible', true)
+                      .order('created_at', { ascending: false });
+                    if (data) {
+                      setCheers(data);
+                      const updated = data.find(c => c.id === selectedCheer.id);
+                      if (updated) setSelectedCheer(updated);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-red-500"
+                >
+                  <Heart size={18} />
+                  <span>{selectedCheer.likes_count || 0}</span>
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
