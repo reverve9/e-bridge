@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Phone, Mail, MapPin, Clock, ExternalLink, Save, Palette, Check, Sun, Moon } from 'lucide-react';
+import { LogOut, Phone, Mail, MapPin, Clock, ExternalLink, Save, Palette, Check } from 'lucide-react';
 
-// ===== 테마 정의 (classic / dark 만) =====
-type ThemeMode = 'classic' | 'dark';
+// ===== 테마 정의 (내장) =====
+type ThemeMode = 'classic' | 'colorful' | 'dark';
 type PartyCode = 'dmj' | 'ppp' | 'ind';
 
 interface PartyTheme {
@@ -12,11 +12,7 @@ interface PartyTheme {
   primaryDark: string;
   primaryText: string;
   secondary: string;
-  background: string;
-  cardBg: string;
-  textPrimary: string;
-  textSecondary: string;
-  border: string;
+  accent: string;
 }
 
 const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
@@ -27,23 +23,23 @@ const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
       primaryDark: '#003670',
       primaryText: '#FFFFFF',
       secondary: '#0073E6',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
+      accent: '#00A3FF',
+    },
+    colorful: {
+      primary: '#0066CC',
+      primaryLight: '#CCE5FF',
+      primaryDark: '#004499',
+      primaryText: '#FFFFFF',
+      secondary: '#00AAFF',
+      accent: '#66D4FF',
     },
     dark: {
       primary: '#4D9FFF',
-      primaryLight: '#1E3A5F',
+      primaryLight: '#1A3A5C',
       primaryDark: '#003366',
       primaryText: '#FFFFFF',
       secondary: '#6BB8FF',
-      background: '#0D1B2A',
-      cardBg: '#1B2838',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#374151',
+      accent: '#99D1FF',
     },
   },
   ppp: {
@@ -53,23 +49,23 @@ const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
       primaryDark: '#B8161F',
       primaryText: '#FFFFFF',
       secondary: '#00B5E2',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
+      accent: '#004C7E',
+    },
+    colorful: {
+      primary: '#E61E2B',
+      primaryLight: '#EDB19D',
+      primaryDark: '#E5554F',
+      primaryText: '#FFFFFF',
+      secondary: '#00B5E2',
+      accent: '#F18070',
     },
     dark: {
-      primary: '#FF6B78',
+      primary: '#E5554F',
       primaryLight: '#3D1A1D',
       primaryDark: '#990011',
       primaryText: '#FFFFFF',
       secondary: '#00B5E2',
-      background: '#1A0A0A',
-      cardBg: '#2D1515',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#4A2020',
+      accent: '#BDE4F8',
     },
   },
   ind: {
@@ -79,11 +75,15 @@ const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
       primaryDark: '#4B5563',
       primaryText: '#FFFFFF',
       secondary: '#9CA3AF',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
+      accent: '#D1D5DB',
+    },
+    colorful: {
+      primary: '#8B5CF6',
+      primaryLight: '#EDE9FE',
+      primaryDark: '#6D28D9',
+      primaryText: '#FFFFFF',
+      secondary: '#A78BFA',
+      accent: '#C4B5FD',
     },
     dark: {
       primary: '#A1A1AA',
@@ -91,11 +91,7 @@ const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
       primaryDark: '#52525B',
       primaryText: '#FFFFFF',
       secondary: '#D4D4D8',
-      background: '#18181B',
-      cardBg: '#27272A',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#3F3F46',
+      accent: '#E4E4E7',
     },
   },
 };
@@ -135,17 +131,20 @@ function ThemePreview({
   isSelected: boolean;
   onClick: () => void;
 }) {
-  const isDark = mode === 'dark';
+  const modeLabels = {
+    classic: '클래식',
+    colorful: '컬러풀',
+    dark: '다크',
+  };
 
   return (
     <button
       onClick={onClick}
-      className={`relative flex-1 p-3 rounded-xl border-2 transition-all ${
+      className={`relative flex-1 p-2 rounded-xl border-2 transition-all ${
         isSelected 
           ? 'border-blue-500 ring-2 ring-blue-200' 
           : 'border-gray-200 hover:border-gray-300'
       }`}
-      style={{ backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }}
     >
       {isSelected && (
         <div className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
@@ -153,50 +152,34 @@ function ThemePreview({
         </div>
       )}
       
-      {/* 아이콘 */}
-      <div className="flex justify-center mb-2">
-        {isDark ? (
-          <Moon size={24} style={{ color: theme.primary }} />
-        ) : (
-          <Sun size={24} style={{ color: theme.primary }} />
-        )}
+      {/* 컬러 프리뷰 */}
+      <div className="flex justify-center gap-1 mb-2">
+        <div 
+          className="w-5 h-5 rounded" 
+          style={{ backgroundColor: theme.primary }}
+        />
+        <div 
+          className="w-5 h-5 rounded" 
+          style={{ backgroundColor: theme.secondary }}
+        />
+        <div 
+          className="w-5 h-5 rounded" 
+          style={{ backgroundColor: theme.primaryLight }}
+        />
       </div>
       
-      {/* 미니 프리뷰 */}
+      {/* 버튼 미리보기 */}
       <div 
-        className="rounded-lg p-2 mb-2"
-        style={{ backgroundColor: theme.background }}
+        className="w-full py-1 rounded-md text-[10px] font-medium mb-1"
+        style={{ 
+          backgroundColor: theme.primary,
+          color: theme.primaryText,
+        }}
       >
-        <div 
-          className="rounded p-1.5 mb-1"
-          style={{ backgroundColor: theme.cardBg, border: `1px solid ${theme.border}` }}
-        >
-          <div 
-            className="h-1.5 w-8 rounded mb-1"
-            style={{ backgroundColor: theme.primary }}
-          />
-          <div 
-            className="h-1 w-12 rounded"
-            style={{ backgroundColor: theme.textSecondary }}
-          />
-        </div>
-        <div 
-          className="w-full py-1 rounded text-[8px] font-medium text-center"
-          style={{ 
-            backgroundColor: theme.primary,
-            color: theme.primaryText,
-          }}
-        >
-          버튼
-        </div>
+        버튼
       </div>
       
-      <p 
-        className="text-xs font-medium text-center"
-        style={{ color: isDark ? '#9CA3AF' : '#374151' }}
-      >
-        {isDark ? '다크 모드' : '클래식'}
-      </p>
+      <p className="text-[10px] font-medium text-gray-700">{modeLabels[mode]}</p>
     </button>
   );
 }
@@ -223,9 +206,7 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
 
       if (candidateRes.data) {
         setCandidate(candidateRes.data);
-        // colorful이 저장되어 있으면 classic으로 변환
-        const savedMode = candidateRes.data.theme_mode;
-        setThemeMode(savedMode === 'dark' ? 'dark' : 'classic');
+        setThemeMode(candidateRes.data.theme_mode || 'classic');
       }
       if (contactRes.data) {
         setContact({
@@ -328,7 +309,7 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
         </div>
       </a>
 
-      {/* 테마 설정 */}
+      {/* 테마 설정 - 유권자 페이지 바로 아래 */}
       {partyThemes && (
         <div className="bg-white rounded-2xl p-4 border border-gray-100 mb-6">
           <h2 className="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
@@ -339,9 +320,9 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
             유권자에게 보여지는 페이지의 테마를 선택하세요
           </p>
           
-          {/* 테마 선택 - 2개 */}
-          <div className="flex gap-3">
-            {(['classic', 'dark'] as ThemeMode[]).map((mode) => (
+          {/* 테마 선택 - 균등 분할 */}
+          <div className="flex gap-2">
+            {(['classic', 'colorful', 'dark'] as ThemeMode[]).map((mode) => (
               <ThemePreview
                 key={mode}
                 theme={partyThemes[mode]}

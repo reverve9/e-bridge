@@ -18,128 +18,100 @@ import {
   ChevronRight,
   ThumbsUp,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, getPartyColor } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
+import PartyHeader from '../components/PartyHeader';
 
-// ========================================
-// 테마 시스템 (packages/ui에서 가져오되, 빌드 이슈 방지를 위해 인라인)
-// ========================================
-type ThemeMode = 'classic' | 'dark';
+// ===== 테마 시스템 =====
+type ThemeMode = 'classic' | 'colorful' | 'dark';
 type PartyCode = 'dmj' | 'ppp' | 'ind';
 
-interface ThemeColors {
+interface PartyTheme {
   primary: string;
   primaryLight: string;
   primaryDark: string;
   primaryText: string;
   secondary: string;
-  background: string;
-  cardBg: string;
-  cardBgAlt: string;
-  textPrimary: string;
-  textSecondary: string;
-  textMuted: string;
-  textInverse: string;
-  border: string;
-  borderLight: string;
-  overlay: string;
+  accent: string;
 }
 
-interface HeaderStyle {
-  background: string;
-  textColor: string;
-  iconBgColor: string;
-}
-
-interface Theme {
-  mode: ThemeMode;
-  party: PartyCode;
-  partyName: string;
-  colors: ThemeColors;
-  header: HeaderStyle;
-  isDark: boolean;
-}
-
-// Classic 색상 (현재 하드코딩된 값 그대로)
-const CLASSIC_BASE: Omit<ThemeColors, 'primary' | 'primaryLight' | 'primaryDark' | 'primaryText' | 'secondary'> = {
-  background: '#F9FAFB',     // bg-gray-50
-  cardBg: '#FFFFFF',         // bg-white
-  cardBgAlt: '#F3F4F6',      // bg-gray-100
-  textPrimary: '#111827',    // text-gray-900
-  textSecondary: '#4B5563',  // text-gray-600
-  textMuted: '#9CA3AF',      // text-gray-400
-  textInverse: '#FFFFFF',
-  border: '#E5E7EB',         // border-gray-200
-  borderLight: '#F3F4F6',    // border-gray-100
-  overlay: 'rgba(0, 0, 0, 0.5)',
-};
-
-// Dark 색상
-const DARK_BASE: Omit<ThemeColors, 'primary' | 'primaryLight' | 'primaryDark' | 'primaryText' | 'secondary'> = {
-  background: '#0F172A',
-  cardBg: '#1E293B',
-  cardBgAlt: '#334155',
-  textPrimary: '#F1F5F9',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textInverse: '#0F172A',
-  border: '#334155',
-  borderLight: '#1E293B',
-  overlay: 'rgba(0, 0, 0, 0.7)',
-};
-
-// 정당별 브랜드 컬러
-const PARTY_BRAND = {
-  dmj: {
-    classic: { primary: '#004EA2', primaryLight: '#E8F0FA', primaryDark: '#003670', secondary: '#0073E6' },
-    dark: { primary: '#4D9FFF', primaryLight: '#1E3A5F', primaryDark: '#003366', secondary: '#6BB8FF' },
-  },
-  ppp: {
-    classic: { primary: '#E61E2B', primaryLight: '#FDECEE', primaryDark: '#B8161F', secondary: '#00B5E2' },
-    dark: { primary: '#FF6B78', primaryLight: '#3D1A1D', primaryDark: '#990011', secondary: '#00B5E2' },
-  },
-  ind: {
-    classic: { primary: '#6B7280', primaryLight: '#F3F4F6', primaryDark: '#4B5563', secondary: '#9CA3AF' },
-    dark: { primary: '#A1A1AA', primaryLight: '#27272A', primaryDark: '#52525B', secondary: '#D4D4D8' },
-  },
-};
-
-// 정당별 헤더 스타일
-const PARTY_HEADERS: Record<PartyCode, Record<ThemeMode, HeaderStyle>> = {
+const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
   dmj: {
     classic: {
-      background: 'linear-gradient(90deg, #00B050 0%, #00A0E0 50%, #004EA2 100%)',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
+      primary: '#004EA2',
+      primaryLight: '#E8F0FA',
+      primaryDark: '#003670',
+      primaryText: '#FFFFFF',
+      secondary: '#0073E6',
+      accent: '#00A3FF',
+    },
+    colorful: {
+      primary: '#0066CC',
+      primaryLight: '#CCE5FF',
+      primaryDark: '#004499',
+      primaryText: '#FFFFFF',
+      secondary: '#00AAFF',
+      accent: '#66D4FF',
     },
     dark: {
-      background: 'linear-gradient(90deg, #006030 0%, #006090 50%, #003670 100%)',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
+      primary: '#4D9FFF',
+      primaryLight: '#1A3A5C',
+      primaryDark: '#003366',
+      primaryText: '#FFFFFF',
+      secondary: '#6BB8FF',
+      accent: '#99D1FF',
     },
   },
   ppp: {
     classic: {
-      background: '#E61E2B',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
+      primary: '#E61E2B',
+      primaryLight: '#FDECEE',
+      primaryDark: '#B8161F',
+      primaryText: '#FFFFFF',
+      secondary: '#00B5E2',
+      accent: '#004C7E',
+    },
+    colorful: {
+      primary: '#E61E2B',
+      primaryLight: '#EDB19D',
+      primaryDark: '#E5554F',
+      primaryText: '#FFFFFF',
+      secondary: '#00B5E2',
+      accent: '#F18070',
     },
     dark: {
-      background: '#8B1118',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
+      primary: '#E5554F',
+      primaryLight: '#3D1A1D',
+      primaryDark: '#990011',
+      primaryText: '#FFFFFF',
+      secondary: '#00B5E2',
+      accent: '#BDE4F8',
     },
   },
   ind: {
     classic: {
-      background: '#6B7280',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.2)',
+      primary: '#6B7280',
+      primaryLight: '#F3F4F6',
+      primaryDark: '#4B5563',
+      primaryText: '#FFFFFF',
+      secondary: '#9CA3AF',
+      accent: '#D1D5DB',
+    },
+    colorful: {
+      primary: '#8B5CF6',
+      primaryLight: '#EDE9FE',
+      primaryDark: '#6D28D9',
+      primaryText: '#FFFFFF',
+      secondary: '#A78BFA',
+      accent: '#C4B5FD',
     },
     dark: {
-      background: '#374151',
-      textColor: '#FFFFFF',
-      iconBgColor: 'rgba(255, 255, 255, 0.15)',
+      primary: '#A1A1AA',
+      primaryLight: '#27272A',
+      primaryDark: '#52525B',
+      primaryText: '#FFFFFF',
+      secondary: '#D4D4D8',
+      accent: '#E4E4E7',
     },
   },
 };
@@ -150,44 +122,28 @@ const PARTY_CODE_MAP: Record<string, PartyCode> = {
   '무소속': 'ind',
 };
 
-const PARTY_NAMES: Record<PartyCode, string> = {
-  dmj: '더불어민주당',
-  ppp: '국민의힘',
-  ind: '무소속',
-};
-
-function createTheme(partyCode: PartyCode, mode: ThemeMode): Theme {
-  const isDark = mode === 'dark';
-  const base = isDark ? DARK_BASE : CLASSIC_BASE;
-  const brand = PARTY_BRAND[partyCode]?.[mode] || PARTY_BRAND.ind[mode];
-  const header = PARTY_HEADERS[partyCode]?.[mode] || PARTY_HEADERS.ind[mode];
-
+function getThemeColors(partyName: string, themeMode: ThemeMode | null): PartyTheme {
+  const partyCode = PARTY_CODE_MAP[partyName];
+  const mode = themeMode || 'classic';
+  
+  if (partyCode && PARTY_THEMES[partyCode]) {
+    return PARTY_THEMES[partyCode][mode];
+  }
+  
+  // 기본값: 기존 partyColor 사용
+  const fallbackColor = getPartyColor(partyName);
   return {
-    mode,
-    party: partyCode,
-    partyName: PARTY_NAMES[partyCode] || '무소속',
-    colors: {
-      ...base,
-      primary: brand.primary,
-      primaryLight: brand.primaryLight,
-      primaryDark: brand.primaryDark,
-      primaryText: '#FFFFFF',
-      secondary: brand.secondary,
-    },
-    header,
-    isDark,
+    primary: fallbackColor,
+    primaryLight: `${fallbackColor}15`,
+    primaryDark: fallbackColor,
+    primaryText: '#FFFFFF',
+    secondary: fallbackColor,
+    accent: fallbackColor,
   };
 }
+// ===== 테마 시스템 끝 =====
 
-function getTheme(partyName: string, themeMode: string | null): Theme {
-  const partyCode = PARTY_CODE_MAP[partyName] || 'ind';
-  const mode: ThemeMode = themeMode === 'dark' ? 'dark' : 'classic';
-  return createTheme(partyCode, mode);
-}
-
-// ========================================
-// 타입 정의
-// ========================================
+// 확장된 Candidate 타입
 interface CandidateExt {
   id: string;
   name: string;
@@ -221,7 +177,7 @@ interface CandidateExt {
   contact_phone: string | null;
   contact_email: string | null;
   is_active: boolean;
-  theme_mode: string | null;
+  theme_mode: 'classic' | 'colorful' | 'dark' | null;
 }
 
 interface Profile {
@@ -257,57 +213,70 @@ interface Cheer {
   created_at: string;
 }
 
-// ========================================
-// 서브 컴포넌트
-// ========================================
+// 섹션 카드 레이아웃 컴포넌트
+function SectionCard({ 
+  title, 
+  partyColor, 
+  rightElement,
+  children 
+}: { 
+  title: string; 
+  partyColor: string; 
+  rightElement?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="px-4 mt-3">
+      <div className="bg-white rounded-2xl shadow-sm">
+        {/* 타이틀 영역 - p-3 */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <h3 className="font-bold flex items-center gap-2">
+            <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+            <span style={{ color: partyColor }}>{title}</span>
+          </h3>
+          {rightElement}
+        </div>
+        {/* 콘텐츠 영역 - px-4 pb-4 */}
+        <div className="px-4 pb-4">
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-// FeedItem 컴포넌트
+// FeedItem 컴포넌트 (깜빡임 방지를 위해 외부 정의)
 function FeedItemComponent({ 
   item, 
-  theme,
+  partyColor, 
   formatTime 
 }: { 
   item: Feed; 
-  theme: Theme;
+  partyColor: string; 
   formatTime: (dateStr: string) => string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const c = theme.colors;
 
   return (
     <div 
-      className="last:border-0 pb-3 last:pb-0 cursor-pointer"
-      style={{ borderBottom: `1px solid ${c.borderLight}` }}
+      className="border-b border-gray-100 last:border-0 pb-3 last:pb-0 cursor-pointer"
       onClick={() => setExpanded(!expanded)}
     >
       {/* 첫째줄: 배지 + 제목 + 시간 */}
       <div className="flex items-center gap-2">
         <span 
           className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
-          style={{ backgroundColor: c.primaryLight, color: c.primary }}
+          style={{ backgroundColor: `${partyColor}15`, color: partyColor }}
         >
           {item.type === 'activity' ? '활동' : item.type === 'news' ? '뉴스' : '공지'}
         </span>
-        <h4 
-          className="font-semibold flex-1 truncate"
-          style={{ color: c.textPrimary }}
-        >
-          {item.title}
-        </h4>
-        <span 
-          className="text-xs flex-shrink-0"
-          style={{ color: c.textMuted }}
-        >
-          {formatTime(item.published_at)}
-        </span>
+        <h4 className="font-semibold text-gray-900 flex-1 truncate">{item.title}</h4>
+        <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(item.published_at)}</span>
       </div>
 
       {/* 요약문 (부제 스타일) - 항상 표시 */}
       {item.summary && (
-        <p 
-          className={`text-sm font-medium italic mt-1 pl-3 ${expanded ? '' : 'truncate'}`} 
-          style={{ color: c.primary }}
-        >
+        <p className={`text-sm font-medium italic mt-1 pl-3 ${expanded ? '' : 'truncate'}`} style={{ color: partyColor }}>
           "{item.summary}"
         </p>
       )}
@@ -316,10 +285,7 @@ function FeedItemComponent({
       {expanded ? (
         <>
           {item.content && (
-            <p 
-              className="text-sm mt-2 whitespace-pre-line leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
+            <p className="text-sm text-gray-600 mt-2 whitespace-pre-line leading-relaxed">
               {item.content}
             </p>
           )}
@@ -330,18 +296,16 @@ function FeedItemComponent({
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="inline-block mt-2 text-xs font-medium"
-              style={{ color: c.primary }}
+              style={{ color: partyColor }}
             >
               원문 보기 →
             </a>
           )}
         </>
       ) : (
+        /* 요약이 없을 때만 본문 첫 줄 표시 */
         !item.summary && item.content && (
-          <p 
-            className="text-sm mt-1 truncate"
-            style={{ color: c.textMuted }}
-          >
+          <p className="text-sm text-gray-500 mt-1 truncate">
             {item.content}
           </p>
         )
@@ -387,6 +351,7 @@ const KakaoIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// SNS 설정
 const SNS_CONFIG: Record<string, { Icon: any; color: string; label: string }> = {
   youtube: { Icon: YoutubeIcon, color: '#FF0000', label: 'YouTube' },
   instagram: { Icon: InstagramIcon, color: '#E4405F', label: 'Instagram' },
@@ -396,9 +361,6 @@ const SNS_CONFIG: Record<string, { Icon: any; color: string; label: string }> = 
   kakao: { Icon: KakaoIcon, color: '#FEE500', label: 'KakaoTalk' },
 };
 
-// ========================================
-// 메인 컴포넌트
-// ========================================
 export default function CandidatePage() {
   const { partyCode, candidateCode } = useParams<{ partyCode: string; candidateCode: string }>();
   const navigate = useNavigate();
@@ -470,6 +432,7 @@ export default function CandidatePage() {
     const interval = setInterval(() => {
       setCheerStartIndex((prev) => {
         const next = prev + 1;
+        // 원본 리스트 끝에 도달하면 리셋 (무한 롤링)
         if (next >= cheers.length) {
           return 0;
         }
@@ -558,6 +521,7 @@ export default function CandidatePage() {
     const trimmed = name.trim();
     if (trimmed.length === 1) return trimmed;
     if (trimmed.length === 2) return trimmed[0] + '*';
+    // 5자 초과면 5자로 제한 후 마스킹
     const limited = trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
     return limited[0] + '*'.repeat(limited.length - 2) + limited[limited.length - 1];
   };
@@ -587,75 +551,43 @@ export default function CandidatePage() {
     if (data) setCheers(data);
   };
 
-  // 테마 가져오기 (candidate 로드 후)
-  const theme = candidate ? getTheme(candidate.party, candidate.theme_mode) : getTheme('무소속', null);
-  const c = theme.colors; // shorthand
-
-  // ========================================
-  // 로딩 상태
-  // ========================================
   if (loading) {
     return (
-      <div 
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: c.cardBg }}
-      >
-        <div 
-          className="w-8 h-8 border-2 rounded-full animate-spin"
-          style={{ borderColor: c.border, borderTopColor: c.textPrimary }}
-        />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
       </div>
     );
   }
 
-  // ========================================
-  // 후보 없음
-  // ========================================
   if (!candidate) {
     return <NotFoundPage />;
   }
 
-  // ========================================
   // 비활성 후보자 랜딩 페이지
-  // ========================================
   if (candidate.is_active === false) {
     return (
-      <div 
-        className="min-h-screen flex flex-col items-center justify-center px-6"
-        style={{ backgroundColor: c.background }}
-      >
-        <div 
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-          style={{ backgroundColor: c.border }}
-        >
-          <User size={40} style={{ color: c.textMuted }} />
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+        <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+          <User size={40} className="text-gray-400" />
         </div>
-        <h1 
-          className="text-xl font-bold mb-2"
-          style={{ color: c.textSecondary }}
-        >
+        <h1 className="text-xl font-bold text-gray-700 mb-2">
           페이지 준비 중입니다
         </h1>
-        <p 
-          className="text-center mb-6"
-          style={{ color: c.textMuted }}
-        >
+        <p className="text-gray-500 text-center mb-6">
           {candidate.name} 후보의 페이지가<br />
           아직 공개되지 않았습니다.
         </p>
-        <p 
-          className="text-sm"
-          style={{ color: c.textMuted }}
-        >
+        <p className="text-sm text-gray-400">
           곧 만나요! 👋
         </p>
       </div>
     );
   }
 
-  // ========================================
-  // 헬퍼 함수들
-  // ========================================
+  // 테마 적용
+  const theme = getThemeColors(candidate.party, candidate.theme_mode);
+  const partyColor = theme.primary; // 하위 호환성 유지
+
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -667,6 +599,17 @@ export default function CandidatePage() {
     return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
   };
 
+  // 선거구 정보 조합
+  const electionInfo = [
+    candidate.election_name,
+    candidate.constituency
+  ].filter(Boolean).join(' ');
+  
+  const constituencyDetail = candidate.constituency_detail 
+    ? `(${candidate.constituency_detail})` 
+    : '';
+
+  // 기호 파싱
   const parseNumber = (num: string | null) => {
     if (!num) return { digit: '', text: '' };
     const match = num.match(/^([\d\-]+)(.*)$/);
@@ -686,8 +629,16 @@ export default function CandidatePage() {
   const educationList = profile?.education || [];
   const careerList = profile?.career || [];
   const totalProfileItems = educationList.length + careerList.length;
+  
+  // 미리보기: 학력 1개, 경력 1개
+  const PREVIEW_EDU_COUNT = 2;
+  const PREVIEW_CAREER_COUNT = 2;
+  const hasMoreItems = educationList.length > PREVIEW_EDU_COUNT || careerList.length > PREVIEW_CAREER_COUNT;
 
-  // SNS 데이터
+  const visibleEducation = showAllProfile ? educationList : educationList.slice(0, PREVIEW_EDU_COUNT);
+  const visibleCareer = showAllProfile ? careerList : careerList.slice(0, PREVIEW_CAREER_COUNT);
+
+  // SNS 데이터 - 등록된 것만 + 순서 적용
   const snsUrls: Record<string, string | null> = {
     youtube: candidate.sns_youtube,
     instagram: candidate.sns_instagram,
@@ -700,6 +651,7 @@ export default function CandidatePage() {
   const defaultOrder = ['youtube', 'instagram', 'facebook', 'twitter', 'blog', 'kakao'];
   const snsOrder = candidate.sns_order || defaultOrder;
   
+  // 등록된 SNS만 순서대로 필터링
   const activeSns = snsOrder
     .filter(key => snsUrls[key])
     .map(key => ({
@@ -708,16 +660,20 @@ export default function CandidatePage() {
       ...SNS_CONFIG[key]
     }));
 
-  // ========================================
-  // 렌더링
-  // ========================================
+  // 정당별 헤더 배경 스타일
+  const getHeaderStyle = () => {
+    if (candidate.party_code === 'tmj' || candidate.party === '더불어민주당') {
+      return {
+        background: 'linear-gradient(90deg, #00B050 0%, #00A0E0 50%, #004EA2 100%)'
+      };
+    }
+    return { backgroundColor: partyColor };
+  };
+
   return (
-    <div 
-      className="min-h-screen relative"
-      style={{ backgroundColor: c.background }}
-    >
+    <div className="min-h-screen bg-gray-50 relative">
       {/* ========== 상단 헤더 ========== */}
-      <header style={{ background: theme.header.background }}>
+      <header style={getHeaderStyle()}>
         <div className="flex items-center justify-between px-4 py-[15px]">
           {candidate.party_logo_url ? (
             <img 
@@ -726,10 +682,7 @@ export default function CandidatePage() {
               className="h-[20px] w-auto object-contain brightness-0 invert"
             />
           ) : (
-            <span 
-              className="text-sm font-bold"
-              style={{ color: theme.header.textColor }}
-            >
+            <span className="text-sm font-bold text-white">
               {candidate.party}
             </span>
           )}
@@ -742,10 +695,9 @@ export default function CandidatePage() {
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: theme.header.iconBgColor }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center bg-white/20"
                 >
-                  <Icon className="w-4 h-4" style={{ color: theme.header.textColor }} />
+                  <Icon className="w-4 h-4 text-white" />
                 </a>
               ))}
             </div>
@@ -754,11 +706,9 @@ export default function CandidatePage() {
       </header>
 
       {/* ========== 히어로 섹션 (16:9 슬라이드) ========== */}
-      <section 
-        className="relative"
-        style={{ backgroundColor: c.cardBg }}
-      >
+      <section className="relative bg-white">
         {(() => {
+          // 갤러리 이미지 배열 (photo_url을 첫번째로)
           const galleryImages = [
             candidate.photo_url,
             ...(candidate.gallery_images || [])
@@ -769,6 +719,7 @@ export default function CandidatePage() {
               className="relative w-full overflow-hidden" 
               style={{ paddingBottom: '56.25%' }}
             >
+              {/* 페이드 슬라이드 */}
               {galleryImages.length > 0 ? (
                 galleryImages.map((img, idx) => (
                   <img 
@@ -781,11 +732,9 @@ export default function CandidatePage() {
               ) : (
                 <div 
                   className="absolute inset-0 w-full h-full flex items-center justify-center"
-                  style={{ background: `linear-gradient(135deg, ${c.primary}40 0%, ${c.primary}20 100%)` }}
+                  style={{ background: `linear-gradient(135deg, ${partyColor}40 0%, ${partyColor}20 100%)` }}
                 >
-                  <span className="text-8xl font-bold" style={{ color: c.textInverse, opacity: 0.5 }}>
-                    {candidate.name[0]}
-                  </span>
+                  <span className="text-8xl font-bold text-white/50">{candidate.name[0]}</span>
                 </div>
               )}
 
@@ -794,16 +743,15 @@ export default function CandidatePage() {
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
                   alt="QR코드"
-                  className="w-[72px] h-[72px] rounded-lg p-1 shadow-lg"
-                  style={{ backgroundColor: c.cardBg }}
+                  className="w-[72px] h-[72px] rounded-lg bg-white p-1 shadow-lg"
                 />
               </div>
 
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent flex items-end px-4 pb-3">
                 {candidate.slogan && (
                   <p 
-                    className="font-score"
-                    style={{ fontSize: '16px', fontWeight: 700, color: c.textInverse }}
+                    className="font-score text-white"
+                    style={{ fontSize: '16px', fontWeight: 700 }}
                   >
                     {candidate.slogan}
                   </p>
@@ -815,24 +763,15 @@ export default function CandidatePage() {
       </section>
 
       {/* ========== 선거구 + 기호/이름 영역 ========== */}
-      <section 
-        className="px-4 py-4"
-        style={{ backgroundColor: c.cardBg }}
-      >
+      <section className="bg-white px-4 py-4">
         <div className="grid grid-cols-2">
           {/* 좌측: 선거구 정보 (오른쪽 정렬) */}
           <div className="text-right pr-4">
-            <p 
-              className="font-semibold leading-tight" 
-              style={{ fontSize: '15px', color: c.textPrimary }}
-            >
+            <p className="font-semibold text-gray-900 leading-tight" style={{ fontSize: '15px' }}>
               {candidate.election_name} {candidate.constituency}
             </p>
             {candidate.constituency_detail && (
-              <p 
-                className="leading-tight" 
-                style={{ fontSize: '13px', color: c.textMuted }}
-              >
+              <p className="text-gray-500 leading-tight" style={{ fontSize: '13px' }}>
                 ({candidate.constituency_detail})
               </p>
             )}
@@ -840,12 +779,7 @@ export default function CandidatePage() {
           
           {/* 우측: 기호 + 이름 */}
           <div className="flex items-center justify-center">
-            <p style={{ 
-              fontSize: '26px', 
-              fontWeight: 900, 
-              fontFamily: "'S-CoreDream', sans-serif", 
-              color: c.textPrimary 
-            }}>
+            <p style={{ fontSize: '26px', fontWeight: 900, fontFamily: "'S-CoreDream', sans-serif", color: '#000' }}>
               {candidate.candidate_number} {candidate.name}
             </p>
           </div>
@@ -854,16 +788,8 @@ export default function CandidatePage() {
 
       {/* ========== 태그라인 ========== */}
       {candidate.tagline && (
-        <section 
-          className="px-6 py-4"
-          style={{ backgroundColor: c.cardBg }}
-        >
-          <p 
-            className="text-sm"
-            style={{ color: c.textSecondary }}
-          >
-            {candidate.tagline}
-          </p>
+        <section className="bg-white px-6 py-4">
+          <p className="text-gray-600 text-sm">{candidate.tagline}</p>
         </section>
       )}
 
@@ -876,8 +802,8 @@ export default function CandidatePage() {
               onClick={() => { setProfileTab('profile'); setShowAllProfile(false); setShowAllIntro(false); }}
               className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
               style={profileTab === 'profile' 
-                ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
-                : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
+                ? { backgroundColor: 'white', color: partyColor, letterSpacing: '0.05em' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af', letterSpacing: '0.05em' }
               }
             >
               프로필
@@ -886,8 +812,8 @@ export default function CandidatePage() {
               onClick={() => { setProfileTab('intro'); setShowAllProfile(false); setShowAllIntro(false); }}
               className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
               style={profileTab === 'intro'
-                ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
-                : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
+                ? { backgroundColor: 'white', color: partyColor, letterSpacing: '0.05em' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af', letterSpacing: '0.05em' }
               }
             >
               인사말
@@ -895,31 +821,16 @@ export default function CandidatePage() {
           </div>
           
           {/* 카드 본문 */}
-          <div 
-            className="rounded-b-2xl rounded-tr-2xl p-4 shadow-sm"
-            style={{ 
-              backgroundColor: c.cardBg,
-              border: theme.isDark ? `1px solid ${c.border}` : 'none'
-            }}
-          >
+          <div className="bg-white rounded-b-2xl rounded-tr-2xl p-4 shadow-sm">
             {profileTab === 'profile' ? (
               <>
                 {/* 학력 */}
                 {educationList.length > 0 && (
                   <div className="mb-3">
-                    <h4 
-                      className="text-xs font-semibold mb-2"
-                      style={{ color: c.textMuted }}
-                    >
-                      학력
-                    </h4>
+                    <h4 className="text-xs font-semibold text-gray-400 mb-2">학력</h4>
                     <ul className="space-y-1">
                       {(showAllProfile ? educationList : educationList.slice(0, 2)).map((edu: any, idx: number) => (
-                        <li 
-                          key={`edu-${idx}`} 
-                          className="text-sm"
-                          style={{ color: c.textSecondary }}
-                        >
+                        <li key={`edu-${idx}`} className="text-sm text-gray-700">
                           • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
                         </li>
                       ))}
@@ -930,28 +841,23 @@ export default function CandidatePage() {
                 {/* 경력 */}
                 {careerList.length > 0 && (
                   <div>
-                    <h4 
-                      className="text-xs font-semibold mb-2"
-                      style={{ color: c.textMuted }}
-                    >
-                      주요 경력
-                    </h4>
+                    <h4 className="text-xs font-semibold text-gray-400 mb-2">주요 경력</h4>
                     <ul className="space-y-1.5">
-                      {(showAllProfile ? careerList : careerList.slice(0, 2)).map((career: any, idx: number) => (
+                      {(showAllProfile ? careerList : careerList.slice(0, 2)).map((c: any, idx: number) => (
                         <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
                           <span 
                             className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
-                            style={career.is_current ? {
-                              backgroundColor: c.primaryLight,
-                              color: c.primary
+                            style={c.is_current ? {
+                              backgroundColor: `${partyColor}20`,
+                              color: partyColor
                             } : {
-                              backgroundColor: c.cardBgAlt,
-                              color: c.textMuted
+                              backgroundColor: '#f3f4f6',
+                              color: '#9ca3af'
                             }}
                           >
-                            {career.is_current ? '現' : '前'}
+                            {c.is_current ? '現' : '前'}
                           </span>
-                          <span style={{ color: c.textSecondary }}>{career.title}</span>
+                          <span className="text-gray-700">{c.title}</span>
                         </li>
                       ))}
                     </ul>
@@ -963,8 +869,7 @@ export default function CandidatePage() {
                   <div className="flex justify-end mt-3">
                     <button
                       onClick={() => setShowAllProfile(!showAllProfile)}
-                      className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                      style={{ color: c.textMuted }}
+                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
                     >
                       {showAllProfile ? '접기' : '더보기'}
                       <ChevronDown 
@@ -978,10 +883,7 @@ export default function CandidatePage() {
             ) : (
               /* 인사말 탭 */
               profile?.introduction && (
-                <div 
-                  className="text-sm leading-relaxed"
-                  style={{ color: c.textSecondary }}
-                >
+                <div className="text-sm text-gray-700 leading-relaxed">
                   {(() => {
                     const intro = profile.introduction;
                     const truncatedIntro = intro.length > 200 ? intro.slice(0, 200) + '...' : intro;
@@ -990,17 +892,8 @@ export default function CandidatePage() {
                       <>
                         <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
                           <span 
-                            className="float-left mr-1.5 flex items-center justify-center"
-                            style={{ 
-                              backgroundColor: c.primary, 
-                              color: c.primaryText,
-                              fontSize: '1.5rem', 
-                              fontWeight: 800, 
-                              width: '40px', 
-                              height: '40px', 
-                              borderRadius: '4px', 
-                              fontFamily: "'S-CoreDream', sans-serif" 
-                            }}
+                            className="float-left mr-1.5 flex items-center justify-center text-white"
+                            style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
                           >
                             {intro[0]}
                           </span>
@@ -1010,15 +903,10 @@ export default function CandidatePage() {
                         {/* 이름 + 싸인 (펼쳤을 때만) */}
                         {showAllIntro && (
                           <div className="flex items-center justify-center gap-2 mt-4 clear-both">
-                            <span 
-                              className="text-sm italic"
-                              style={{ color: c.textSecondary }}
-                            >
-                              {candidate.name} 올림
-                            </span>
-                            {candidate.signature_url && (
+                            <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
+                            {(candidate as any).signature_url && (
                               <img 
-                                src={candidate.signature_url} 
+                                src={(candidate as any).signature_url} 
                                 alt="싸인" 
                                 className="h-8 object-contain"
                               />
@@ -1031,8 +919,7 @@ export default function CandidatePage() {
                           <div className="flex justify-end mt-3 clear-both">
                             <button
                               onClick={() => setShowAllIntro(!showAllIntro)}
-                              className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                              style={{ color: c.textMuted }}
+                              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
                             >
                               {showAllIntro ? '접기' : '더보기'}
                               <ChevronDown 
@@ -1052,22 +939,13 @@ export default function CandidatePage() {
         </section>
       )}
 
-      {/* ========== 핵심공약 섹션 ========== */}
+      {/* ========== 핵심공약 섹션 (고정) ========== */}
       {pledges.length > 0 && (
         <section className="px-4 mt-3">
-          <div 
-            className="rounded-2xl p-4 shadow-sm"
-            style={{ 
-              backgroundColor: c.cardBg,
-              border: theme.isDark ? `1px solid ${c.border}` : 'none'
-            }}
-          >
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
             <h3 className="font-bold mb-3 flex items-center gap-2">
-              <span 
-                className="w-1 h-5 rounded-full" 
-                style={{ backgroundColor: c.primary }} 
-              />
-              <span style={{ color: c.primary }}>핵심공약</span>
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+              <span style={{ color: partyColor }}>핵심공약</span>
             </h3>
             <div className="space-y-2">
               {(showAllPledges ? pledges : pledges.slice(0, 4)).map((pledge, idx) => {
@@ -1078,35 +956,22 @@ export default function CandidatePage() {
                   <div 
                     key={pledge.id} 
                     className="rounded-xl p-3 cursor-pointer transition-all"
-                    style={{ 
-                      backgroundColor: idx % 2 === 0 
-                        ? (theme.isDark ? c.cardBgAlt : `${c.primary}08`)
-                        : (theme.isDark ? c.border : `${c.primary}04`)
-                    }}
+                    style={{ backgroundColor: idx % 2 === 0 ? `${partyColor}08` : `${partyColor}04` }}
                     onClick={() => setExpandedPledgeId(isExpanded ? null : pledge.id)}
                   >
                     <div className="flex items-center gap-2">
                       <div 
-                        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ 
-                          backgroundColor: c.primary, 
-                          color: c.primaryText,
-                          fontSize: '11px', 
-                          fontWeight: 600 
-                        }}
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                        style={{ backgroundColor: partyColor, fontSize: '11px', fontWeight: 600 }}
                       >
                         {idx + 1}
                       </div>
-                      <h4 
-                        className="flex-1 leading-snug" 
-                        style={{ fontSize: '15px', fontWeight: 600, color: c.textPrimary }}
-                      >
+                      <h4 className="flex-1 text-gray-900 leading-snug" style={{ fontSize: '15px', fontWeight: 600 }}>
                         {pledge.title}
                       </h4>
                       <ChevronDown 
                         size={16} 
-                        className={`transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
-                        style={{ color: c.textMuted }}
+                        className={`text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
                       />
                     </div>
                     
@@ -1114,10 +979,7 @@ export default function CandidatePage() {
                     {isExpanded && (
                       <div className="mt-2 pl-7">
                         {pledge.description && (
-                          <p 
-                            className="leading-relaxed mb-3" 
-                            style={{ fontSize: '13px', color: c.textSecondary }}
-                          >
+                          <p className="text-gray-600 leading-relaxed mb-3" style={{ fontSize: '13px' }}>
                             {pledge.description}
                           </p>
                         )}
@@ -1128,11 +990,13 @@ export default function CandidatePage() {
                             
                             await supabase.rpc('increment_pledge_likes', { pledge_id: pledge.id });
                             
+                            // localStorage 업데이트
                             const newLiked = new Set(likedPledges);
                             newLiked.add(pledge.id);
                             setLikedPledges(newLiked);
                             localStorage.setItem('likedPledges', JSON.stringify([...newLiked]));
                             
+                            // pledges 새로고침
                             const { data } = await supabase
                               .from('pledges')
                               .select('*')
@@ -1140,14 +1004,11 @@ export default function CandidatePage() {
                               .order('order');
                             if (data) setPledges(data);
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all"
-                          style={isLiked ? {
-                            backgroundColor: theme.isDark ? '#7F1D1D' : '#FEF2F2',
-                            color: '#EF4444'
-                          } : {
-                            backgroundColor: c.cardBgAlt,
-                            color: c.textMuted
-                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${
+                            isLiked 
+                              ? 'bg-red-50 text-red-500' 
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
                         >
                           <ThumbsUp size={14} className={isLiked ? 'fill-current' : ''} />
                           <span>{pledge.likes_count || 0}</span>
@@ -1162,8 +1023,7 @@ export default function CandidatePage() {
               <div className="flex justify-end mt-3">
                 <button
                   onClick={() => setShowAllPledges(!showAllPledges)}
-                  className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                  style={{ color: c.textMuted }}
+                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
                 >
                   {showAllPledges ? '접기' : `더보기 (${pledges.length - 4}개)`}
                   <ChevronDown 
@@ -1179,46 +1039,28 @@ export default function CandidatePage() {
 
       {/* ========== 최근 소식 섹션 ========== */}
       <section className="px-4 mt-4">
-        <div 
-          className="rounded-2xl p-4 shadow-sm"
-          style={{ 
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none'
-          }}
-        >
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h3 className="font-bold mb-3 flex items-center gap-2">
-            <span 
-              className="w-1 h-5 rounded-full" 
-              style={{ backgroundColor: c.primary }} 
-            />
-            <span style={{ color: c.primary }}>최근 소식</span>
+            <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+            <span style={{ color: partyColor }}>최근 소식</span>
           </h3>
           <div className="space-y-3">
             {feeds.length === 0 ? (
-              <p 
-                className="text-center py-4"
-                style={{ color: c.textMuted }}
-              >
-                등록된 소식이 없습니다
-              </p>
+              <p className="text-center text-gray-400 py-4">등록된 소식이 없습니다</p>
             ) : (
               <>
                 {feeds.slice(0, feedDisplayCount).map((item) => (
                   <FeedItemComponent 
                     key={item.id} 
                     item={item} 
-                    theme={theme}
+                    partyColor={partyColor} 
                     formatTime={formatTime}
                   />
                 ))}
                 {feeds.length > feedDisplayCount && (
                   <button
                     onClick={() => setFeedDisplayCount(prev => prev + 5)}
-                    className="w-full py-3 text-sm rounded-xl hover:opacity-90"
-                    style={{ 
-                      backgroundColor: c.cardBgAlt, 
-                      color: c.textMuted 
-                    }}
+                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
                   >
                     소식 더보기 ({feeds.length - feedDisplayCount}개)
                   </button>
@@ -1231,48 +1073,26 @@ export default function CandidatePage() {
 
       {/* ========== 응원 메시지 ========== */}
       <section className="px-4 pb-6 mt-3">
-        <div 
-          className="rounded-2xl p-4 shadow-sm"
-          style={{ 
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none'
-          }}
-        >
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold flex items-center gap-2">
-              <span 
-                className="w-1 h-5 rounded-full" 
-                style={{ backgroundColor: c.primary }} 
-              />
-              <span style={{ color: c.primary }}>응원 메시지</span>
+              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
+              <span style={{ color: partyColor }}>응원 메시지</span>
             </h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowCheerModal(true)}
                 className="px-2.5 py-1 rounded-full text-xs font-medium"
-                style={{ backgroundColor: c.primaryLight, color: c.primary }}
+                style={{ backgroundColor: `${partyColor}15`, color: partyColor }}
               >
                 + 남기기
               </button>
-              <span 
-                className="text-xs"
-                style={{ color: c.textMuted }}
-              >
-                {cheers.length}개
-              </span>
+              <span className="text-xs text-gray-400">{cheers.length}개</span>
             </div>
           </div>
-          <div 
-            className="relative overflow-hidden" 
-            style={{ height: cheers.length === 0 ? 'auto' : `${Math.min(cheers.length, 5) * 36}px` }}
-          >
+          <div className="relative overflow-hidden" style={{ height: cheers.length === 0 ? 'auto' : `${Math.min(cheers.length, 5) * 36}px` }}>
             {cheers.length === 0 ? (
-              <p 
-                className="text-center py-4"
-                style={{ color: c.textMuted }}
-              >
-                첫 번째 응원을 남겨주세요!
-              </p>
+              <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
               <div 
                 className={cheerStartIndex === 0 ? '' : 'transition-transform duration-700 ease-in-out'}
@@ -1284,25 +1104,12 @@ export default function CandidatePage() {
                     className="flex items-center gap-2 h-9 cursor-pointer"
                     onClick={() => setSelectedCheer(cheer)}
                   >
-                    <span 
-                      className="font-semibold text-sm w-14 flex-shrink-0"
-                      style={{ color: c.textPrimary }}
-                    >
-                      {cheer.name}
-                    </span>
-                    <p 
-                      className="text-sm flex-1 min-w-0 truncate"
-                      style={{ color: c.textSecondary }}
-                    >
+                    <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
+                    <p className="text-sm text-gray-700 flex-1 min-w-0 truncate">
                       {cheer.message}
                     </p>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span 
-                        className="text-xs"
-                        style={{ color: c.textMuted }}
-                      >
-                        {formatTime(cheer.created_at)}
-                      </span>
+                      <span className="text-gray-400 text-xs">{formatTime(cheer.created_at)}</span>
                       <button 
                         onClick={async (e) => {
                           e.stopPropagation();
@@ -1315,8 +1122,7 @@ export default function CandidatePage() {
                             .order('created_at', { ascending: false });
                           if (data) setCheers(data);
                         }}
-                        className="flex items-center gap-0.5 hover:text-red-500"
-                        style={{ color: c.textMuted }}
+                        className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
                       >
                         <Heart size={12} />
                         <span className="text-xs">{cheer.likes_count || 0}</span>
@@ -1334,39 +1140,26 @@ export default function CandidatePage() {
       <section className="px-4 mt-3">
         <button
           onClick={fetchPartyCandidates}
-          className="w-full rounded-2xl p-4 shadow-sm flex items-center justify-between"
-          style={{ 
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none'
-          }}
+          className="w-full bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <div 
               className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: c.primaryLight }}
+              style={{ backgroundColor: `${partyColor}20` }}
             >
-              <Users size={20} style={{ color: c.primary }} />
+              <Users size={20} style={{ color: partyColor }} />
             </div>
-            <span 
-              className="font-medium"
-              style={{ color: c.textPrimary }}
-            >
+            <span className="font-medium text-gray-900">
               {candidate.party} 후보 응원하러 가기
             </span>
           </div>
-          <ChevronRight size={20} style={{ color: c.textMuted }} />
+          <ChevronRight size={20} className="text-gray-400" />
         </button>
       </section>
 
       {/* ========== D-Day + 내 선거구 확인 ========== */}
       <section className="px-4 mt-3">
-        <div 
-          className="rounded-2xl p-4 shadow-sm flex gap-4"
-          style={{ 
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none'
-          }}
-        >
+        <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
           {/* D-Day (1/4) */}
           {(() => {
             const voteDate = new Date('2026-06-03T00:00:00+09:00');
@@ -1376,32 +1169,19 @@ export default function CandidatePage() {
             const isUrgent = diffDays <= 20;
             
             return (
-              <div 
-                className="w-1/4 flex flex-col items-center justify-center pr-4"
-                style={{ borderRight: `1px solid ${c.borderLight}` }}
-              >
-                <span 
-                  className="text-xs"
-                  style={{ color: c.textMuted }}
-                >
-                  투표일까지
-                </span>
+              <div className="w-1/4 flex flex-col items-center justify-center border-r border-gray-100 pr-4">
+                <span className="text-xs text-gray-400">투표일까지</span>
                 <span 
                   className="text-2xl my-0.5"
                   style={{ 
                     fontFamily: "'S-CoreDream', sans-serif", 
                     fontWeight: 800,
-                    color: isUrgent ? '#EF4444' : c.textPrimary
+                    color: isUrgent ? '#EF4444' : '#1F2937'
                   }}
                 >
                   {diffDays}
                 </span>
-                <span 
-                  className="text-xs"
-                  style={{ color: c.textMuted }}
-                >
-                  2026.6.3(수)
-                </span>
+                <span className="text-xs text-gray-400">2026.6.3(수)</span>
               </div>
             );
           })()}
@@ -1413,31 +1193,17 @@ export default function CandidatePage() {
               onClick={() => setShowConstituencyInfo(!showConstituencyInfo)}
             >
               <div className="flex items-center gap-2">
-                <MapPin size={16} style={{ color: c.primary }} />
-                <span 
-                  className="font-medium text-sm"
-                  style={{ color: c.textPrimary }}
-                >
-                  내 선거구 확인
-                </span>
+                <MapPin size={16} style={{ color: partyColor }} />
+                <span className="font-medium text-gray-900 text-sm">내 선거구 확인</span>
               </div>
               <ChevronDown 
                 size={16} 
-                className={`transition-transform ${showConstituencyInfo ? 'rotate-180' : ''}`}
-                style={{ color: c.textMuted }}
+                className={`text-gray-400 transition-transform ${showConstituencyInfo ? 'rotate-180' : ''}`}
               />
             </div>
             {showConstituencyInfo && (
-              <div 
-                className="mt-3 rounded-xl p-3 text-center"
-                style={{ backgroundColor: c.cardBgAlt }}
-              >
-                <p 
-                  className="text-sm"
-                  style={{ color: c.textMuted }}
-                >
-                  현재 조회기간이 아닙니다
-                </p>
+              <div className="mt-3 bg-gray-50 rounded-xl p-3 text-center">
+                <p className="text-sm text-gray-400">현재 조회기간이 아닙니다</p>
               </div>
             )}
           </div>
@@ -1446,50 +1212,27 @@ export default function CandidatePage() {
 
       {/* ========== 연락사무소 푸터 ========== */}
       {(candidate.contact_address || candidate.contact_phone || candidate.contact_email) && (
-        <footer 
-          className="px-6 py-6 mt-6"
-          style={{ backgroundColor: c.cardBgAlt }}
-        >
-          <h3 
-            className="font-bold mb-3 text-sm"
-            style={{ color: c.textPrimary }}
-          >
-            선거운동 연락사무소
-          </h3>
+        <footer className="bg-gray-100 px-6 py-6 mt-6">
+          <h3 className="font-bold text-gray-900 mb-3 text-sm">선거운동 연락사무소</h3>
           <div className="space-y-2 text-sm">
             {candidate.contact_address && (
-              <p 
-                className="flex items-start gap-2"
-                style={{ color: c.textSecondary }}
-              >
-                <MapPin size={16} className="flex-shrink-0 mt-0.5" style={{ color: c.textMuted }} />
+              <p className="text-gray-600 flex items-start gap-2">
+                <MapPin size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
                 <span>{candidate.contact_address}</span>
               </p>
             )}
             {candidate.contact_phone && (
-              <p 
-                className="flex items-center gap-2"
-                style={{ color: c.textSecondary }}
-              >
-                <Phone size={16} className="flex-shrink-0" style={{ color: c.textMuted }} />
-                <a 
-                  href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} 
-                  style={{ color: c.primary }}
-                >
+              <p className="text-gray-600 flex items-center gap-2">
+                <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                <a href={`tel:${candidate.contact_phone.replace(/-/g, '')}`} className="text-blue-600">
                   {candidate.contact_phone}
                 </a>
               </p>
             )}
             {candidate.contact_email && (
-              <p 
-                className="flex items-center gap-2"
-                style={{ color: c.textSecondary }}
-              >
-                <Mail size={16} className="flex-shrink-0" style={{ color: c.textMuted }} />
-                <a 
-                  href={`mailto:${candidate.contact_email}`} 
-                  style={{ color: c.primary }}
-                >
+              <p className="text-gray-600 flex items-center gap-2">
+                <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                <a href={`mailto:${candidate.contact_email}`} className="text-blue-600">
                   {candidate.contact_email}
                 </a>
               </p>
@@ -1499,20 +1242,11 @@ export default function CandidatePage() {
       )}
 
       {/* ========== 면책 문구 + 카피라이트 ========== */}
-      <footer 
-        className="px-6 py-6"
-        style={{ backgroundColor: c.border }}
-      >
-        <p 
-          className="text-xs leading-relaxed mb-4"
-          style={{ color: c.textMuted }}
-        >
+      <footer className="bg-gray-200 px-6 py-6">
+        <p className="text-xs text-gray-500 leading-relaxed mb-4">
           본 페이지에 게시된 모든 선거 관련 정보(공약, 프로필, 이미지 등)는 해당 후보자 또는 선거캠프가 직접 작성·제공한 것입니다. (주)나인브릿지는 플랫폼 기술 제공 및 운영만을 담당하며, 게시된 내용의 정확성·적법성에 대한 책임은 해당 후보자에게 있습니다.
         </p>
-        <p 
-          className="text-xs text-center"
-          style={{ color: c.textMuted }}
-        >
+        <p className="text-xs text-gray-400 text-center">
           © 2026 (주)나인브릿지. All rights reserved.
         </p>
       </footer>
@@ -1536,8 +1270,8 @@ export default function CandidatePage() {
               alert('링크가 복사되었습니다!');
             }
           }}
-          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center"
-          style={{ backgroundColor: c.primary, color: c.primaryText }}
+          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white"
+          style={{ backgroundColor: partyColor }}
         >
           <Share2 size={20} />
         </button>
@@ -1550,8 +1284,7 @@ export default function CandidatePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ backgroundColor: c.overlay }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
             onClick={() => setShowCheerModal(false)}
           >
             <motion.div
@@ -1559,18 +1292,12 @@ export default function CandidatePage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-6"
-              style={{ backgroundColor: c.cardBg }}
+              className="bg-white w-full max-w-sm rounded-2xl p-6"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 
-                  className="font-bold text-lg"
-                  style={{ color: c.textPrimary }}
-                >
-                  응원 메시지
-                </h3>
+                <h3 className="font-bold text-lg">응원 메시지</h3>
                 <button onClick={() => setShowCheerModal(false)}>
-                  <X size={24} style={{ color: c.textMuted }} />
+                  <X size={24} className="text-gray-400" />
                 </button>
               </div>
               <input
@@ -1578,34 +1305,21 @@ export default function CandidatePage() {
                 value={cheerName}
                 onChange={(e) => setCheerName(e.target.value)}
                 placeholder="이름 (비우면 익명)"
-                className="w-full p-4 rounded-xl mb-3 focus:outline-none focus:ring-2"
-                style={{ 
-                  backgroundColor: c.cardBgAlt, 
-                  color: c.textPrimary,
-                  border: `1px solid ${c.border}`
-                }}
+                className="w-full p-4 bg-gray-50 rounded-xl mb-3 focus:outline-none focus:ring-2"
               />
               <textarea
                 value={cheerMessage}
                 onChange={(e) => setCheerMessage(e.target.value)}
                 placeholder="후보자에게 응원 메시지를 남겨주세요!"
-                className="w-full h-28 p-4 rounded-xl resize-none focus:outline-none focus:ring-2"
-                style={{ 
-                  backgroundColor: c.cardBgAlt, 
-                  color: c.textPrimary,
-                  border: `1px solid ${c.border}`
-                }}
+                className="w-full h-28 p-4 bg-gray-50 rounded-xl resize-none focus:outline-none focus:ring-2"
               />
-              <p 
-                className="text-xs mt-2 mb-3"
-                style={{ color: c.textMuted }}
-              >
+              <p className="text-xs text-gray-400 mt-2 mb-3">
                 * 응원 외 메시지는 비공개 처리될 수 있습니다.
               </p>
               <button 
                 onClick={handleCheerSubmit}
-                className="w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2"
-                style={{ backgroundColor: c.primary, color: c.primaryText }}
+                className="w-full py-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2"
+                style={{ backgroundColor: partyColor }}
               >
                 <Send size={18} />
                 응원 보내기
@@ -1622,8 +1336,7 @@ export default function CandidatePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ backgroundColor: c.overlay }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
             onClick={() => setShowPartyCandidatesModal(false)}
           >
             <motion.div
@@ -1631,72 +1344,47 @@ export default function CandidatePage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl max-h-[70vh] overflow-hidden flex flex-col"
-              style={{ backgroundColor: c.cardBg }}
+              className="bg-white w-full max-w-sm rounded-2xl max-h-[70vh] overflow-hidden flex flex-col"
             >
-              <div 
-                className="flex items-center justify-between p-4"
-                style={{ borderBottom: `1px solid ${c.border}` }}
-              >
-                <h3 
-                  className="font-bold text-lg"
-                  style={{ color: c.textPrimary }}
-                >
-                  {candidate.party} 후보
-                </h3>
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="font-bold text-lg">{candidate.party} 후보</h3>
                 <button onClick={() => setShowPartyCandidatesModal(false)}>
-                  <X size={24} style={{ color: c.textMuted }} />
+                  <X size={24} className="text-gray-400" />
                 </button>
               </div>
               <div className="p-4 overflow-y-auto flex-1">
                 {partyCandidates.length === 0 ? (
-                  <p 
-                    className="text-center py-8"
-                    style={{ color: c.textMuted }}
-                  >
-                    다른 후보가 없습니다
-                  </p>
+                  <p className="text-center text-gray-400 py-8">다른 후보가 없습니다</p>
                 ) : (
                   <div className="space-y-3">
-                    {partyCandidates.map((cand) => (
+                    {partyCandidates.map((c) => (
                       <button
-                        key={cand.id}
+                        key={c.id}
                         onClick={() => {
                           setShowPartyCandidatesModal(false);
-                          window.open(`/${cand.party_code}/${cand.candidate_code}`, '_blank');
+                          window.open(`/${c.party_code}/${c.candidate_code}`, '_blank');
                         }}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:opacity-90"
-                        style={{ backgroundColor: c.cardBgAlt }}
+                        className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 text-left"
                       >
-                        {(cand as any).thumbnail_url || cand.photo_url ? (
+                        {(c as any).thumbnail_url || c.photo_url ? (
                           <img 
-                            src={(cand as any).thumbnail_url || cand.photo_url} 
-                            alt={cand.name}
+                            src={(c as any).thumbnail_url || c.photo_url} 
+                            alt={c.name}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                         ) : (
                           <div 
-                            className="w-12 h-12 rounded-full flex items-center justify-center font-bold"
-                            style={{ backgroundColor: c.primary, color: c.primaryText }}
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                            style={{ backgroundColor: partyColor }}
                           >
-                            {cand.name[0]}
+                            {c.name[0]}
                           </div>
                         )}
                         <div className="flex-1">
-                          <p 
-                            className="font-medium"
-                            style={{ color: c.textPrimary }}
-                          >
-                            {cand.candidate_number} {cand.name}
-                          </p>
-                          <p 
-                            className="text-sm"
-                            style={{ color: c.textMuted }}
-                          >
-                            {cand.region} {cand.district} {cand.constituency}
-                          </p>
+                          <p className="font-medium text-gray-900">{c.candidate_number} {c.name}</p>
+                          <p className="text-sm text-gray-500">{c.region} {c.district} {c.constituency}</p>
                         </div>
-                        <ChevronRight size={18} style={{ color: c.textMuted }} />
+                        <ChevronRight size={18} className="text-gray-400" />
                       </button>
                     ))}
                   </div>
@@ -1714,8 +1402,7 @@ export default function CandidatePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ backgroundColor: c.overlay }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
             onClick={() => setShowCheerCompleteModal(false)}
           >
             <motion.div
@@ -1723,25 +1410,16 @@ export default function CandidatePage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-6 text-center"
-              style={{ backgroundColor: c.cardBg }}
+              className="bg-white w-full max-w-sm rounded-2xl p-6 text-center"
             >
               <div 
                 className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ backgroundColor: c.primaryLight }}
+                style={{ backgroundColor: `${partyColor}20` }}
               >
-                <Heart size={32} style={{ color: c.primary }} fill={c.primary} />
+                <Heart size={32} style={{ color: partyColor }} fill={partyColor} />
               </div>
-              <h3 
-                className="font-bold text-xl mb-2"
-                style={{ color: c.textPrimary }}
-              >
-                응원 완료! 🎉
-              </h3>
-              <p 
-                className="mb-6"
-                style={{ color: c.textMuted }}
-              >
+              <h3 className="font-bold text-xl mb-2">응원 완료! 🎉</h3>
+              <p className="text-gray-500 mb-6">
                 {candidate.name} 후보에게 응원이 전달되었어요.<br />
                 친구들에게도 알려주세요!
               </p>
@@ -1762,8 +1440,8 @@ export default function CandidatePage() {
                     alert('링크가 복사되었습니다!');
                   }
                 }}
-                className="w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 mb-3"
-                style={{ backgroundColor: '#FEE500', color: '#3C1E1E' }}
+                className="w-full py-3.5 rounded-xl font-semibold text-amber-900 flex items-center justify-center gap-2 mb-3"
+                style={{ backgroundColor: '#FEE500' }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.89 5.29 4.68 6.68l-.86 3.18c-.1.37.32.68.65.48l3.89-2.57c.53.07 1.07.1 1.64.1 5.52 0 10-3.58 10-8s-4.48-8-10-8z"/>
@@ -1777,8 +1455,7 @@ export default function CandidatePage() {
                   navigator.clipboard.writeText(shareUrl);
                   alert('링크가 복사되었습니다!');
                 }}
-                className="w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2"
-                style={{ backgroundColor: c.cardBgAlt, color: c.textSecondary }}
+                className="w-full py-3.5 rounded-xl font-semibold text-gray-700 bg-gray-100 flex items-center justify-center gap-2"
               >
                 <Share2 size={18} />
                 링크 복사
@@ -1786,8 +1463,7 @@ export default function CandidatePage() {
               
               <button
                 onClick={() => setShowCheerCompleteModal(false)}
-                className="mt-4 text-sm"
-                style={{ color: c.textMuted }}
+                className="mt-4 text-sm text-gray-400"
               >
                 닫기
               </button>
@@ -1803,8 +1479,7 @@ export default function CandidatePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            style={{ backgroundColor: c.overlay }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
             onClick={() => setSelectedCheer(null)}
           >
             <motion.div
@@ -1812,38 +1487,21 @@ export default function CandidatePage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl p-5"
-              style={{ backgroundColor: c.cardBg }}
+              className="bg-white w-full max-w-sm rounded-2xl p-5"
             >
               <div className="flex items-center justify-between mb-4">
-                <span 
-                  className="font-bold text-lg"
-                  style={{ color: c.textPrimary }}
-                >
-                  {selectedCheer.name}
-                </span>
+                <span className="font-bold text-lg text-gray-900">{selectedCheer.name}</span>
                 <button onClick={() => setSelectedCheer(null)}>
-                  <X size={24} style={{ color: c.textMuted }} />
+                  <X size={24} className="text-gray-400" />
                 </button>
               </div>
               
-              <p 
-                className="leading-relaxed mb-4 whitespace-pre-wrap"
-                style={{ color: c.textSecondary }}
-              >
+              <p className="text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">
                 {selectedCheer.message}
               </p>
               
-              <div 
-                className="flex items-center justify-between pt-3"
-                style={{ borderTop: `1px solid ${c.border}` }}
-              >
-                <span 
-                  className="text-sm"
-                  style={{ color: c.textMuted }}
-                >
-                  {formatTime(selectedCheer.created_at)}
-                </span>
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="text-gray-400 text-sm">{formatTime(selectedCheer.created_at)}</span>
                 <button 
                   onClick={async () => {
                     await supabase.rpc('increment_cheer_likes', { cheer_id: selectedCheer.id });
@@ -1855,12 +1513,11 @@ export default function CandidatePage() {
                       .order('created_at', { ascending: false });
                     if (data) {
                       setCheers(data);
-                      const updated = data.find(ch => ch.id === selectedCheer.id);
+                      const updated = data.find(c => c.id === selectedCheer.id);
                       if (updated) setSelectedCheer(updated);
                     }
                   }}
-                  className="flex items-center gap-1.5 hover:text-red-500"
-                  style={{ color: c.textMuted }}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-red-500"
                 >
                   <Heart size={18} />
                   <span>{selectedCheer.likes_count || 0}</span>
