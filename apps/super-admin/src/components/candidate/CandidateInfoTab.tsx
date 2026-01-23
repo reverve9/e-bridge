@@ -70,6 +70,7 @@ export default function CandidateInfoTab({ candidate, onUpdate }: CandidateInfoT
     gallery_images: (candidate as any).gallery_images || [],
     signature_url: (candidate as any).signature_url || '',
     party_logo_url: (candidate as any).party_logo_url || '',
+    theme_mode: (candidate as any).theme_mode || 'classic',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -267,6 +268,7 @@ export default function CandidateInfoTab({ candidate, onUpdate }: CandidateInfoT
         gallery_images: formData.gallery_images,
         signature_url: formData.signature_url || null,
         party_logo_url: formData.party_logo_url || null,
+        theme_mode: formData.theme_mode,
       })
       .eq('id', candidate.id);
 
@@ -636,6 +638,36 @@ export default function CandidateInfoTab({ candidate, onUpdate }: CandidateInfoT
           placeholder="예: 멀리 보고 크게 생각하는 새로운 시의원!"
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+      </div>
+
+      {/* 테마 설정 */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">유권자 페이지 테마</label>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="theme_mode"
+              value="classic"
+              checked={formData.theme_mode === 'classic'}
+              onChange={handleChange}
+              className="w-4 h-4 text-blue-600"
+            />
+            <span className="text-gray-700">클래식 (라이트)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="theme_mode"
+              value="dark"
+              checked={formData.theme_mode === 'dark'}
+              onChange={handleChange}
+              className="w-4 h-4 text-blue-600"
+            />
+            <span className="text-gray-700">다크</span>
+          </label>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">유권자가 보는 후보자 페이지에 적용됩니다.</p>
       </div>
 
       <div>
