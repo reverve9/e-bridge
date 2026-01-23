@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Candidate } from '../lib/supabase';
-import { Eye, Heart, MessageCircle, HelpCircle, ChevronRight, ExternalLink, ThumbsUp } from 'lucide-react';
+import { Eye, Heart, MessageCircle, ChevronRight, ExternalLink, ThumbsUp } from 'lucide-react';
 
 interface Pledge {
   id: string;
@@ -22,7 +22,6 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
     todayVisits: 0,
     cheers: 0,
     feeds: 0,
-    unansweredQna: 0,
     totalPledgeLikes: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -44,10 +43,9 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
       const todayISO = today.toISOString();
 
       // 통계
-      const [cheersRes, feedsRes, qnaRes, visitsRes, todayVisitsRes, pledgesRes] = await Promise.all([
+      const [cheersRes, feedsRes, visitsRes, todayVisitsRes, pledgesRes] = await Promise.all([
         supabase.from('cheers').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
         supabase.from('feeds').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
-        supabase.from('qna').select('id', { count: 'exact' }).eq('candidate_id', candidateId).eq('is_answered', false),
         supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId),
         supabase.from('page_visits').select('id', { count: 'exact' }).eq('candidate_id', candidateId).gte('visited_at', todayISO),
         supabase.from('pledges').select('id, title, likes_count').eq('candidate_id', candidateId).order('order'),
@@ -62,7 +60,6 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
         todayVisits: todayVisitsRes.count || 0,
         cheers: cheersRes.count || 0,
         feeds: feedsRes.count || 0,
-        unansweredQna: qnaRes.count || 0,
         totalPledgeLikes,
       });
 
@@ -184,38 +181,17 @@ export default function DashboardPage({ candidateId }: DashboardPageProps) {
       {/* 빠른 메뉴 */}
       <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
         <button
-          onClick={() => navigate('/profile')}
-          className="w-full flex items-center justify-between p-4"
-        >
-          <span className="font-medium">프로필 수정</span>
-          <ChevronRight size={20} className="text-gray-400" />
-        </button>
-        <button
           onClick={() => navigate('/feeds')}
           className="w-full flex items-center justify-between p-4"
         >
-          <span className="font-medium">새 소식 등록</span>
+          <span className="font-medium">소식 등록</span>
           <ChevronRight size={20} className="text-gray-400" />
         </button>
         <button
-          onClick={() => navigate('/pledges')}
+          onClick={() => navigate('/cheers')}
           className="w-full flex items-center justify-between p-4"
         >
-          <span className="font-medium">공약 관리</span>
-          <ChevronRight size={20} className="text-gray-400" />
-        </button>
-        <button
-          onClick={() => navigate('/qna')}
-          className="w-full flex items-center justify-between p-4"
-        >
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Q&A 답변하기</span>
-            {stats.unansweredQna > 0 && (
-              <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                {stats.unansweredQna}
-              </span>
-            )}
-          </div>
+          <span className="font-medium">응원 메시지 관리</span>
           <ChevronRight size={20} className="text-gray-400" />
         </button>
       </div>
