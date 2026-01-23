@@ -1,111 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogOut, Phone, Mail, MapPin, Clock, ExternalLink, Save, Palette, Check, Sun, Moon } from 'lucide-react';
-
-// ===== 테마 정의 (classic / dark 만) =====
-type ThemeMode = 'classic' | 'dark';
-type PartyCode = 'dmj' | 'ppp' | 'ind';
-
-interface PartyTheme {
-  primary: string;
-  primaryLight: string;
-  primaryDark: string;
-  primaryText: string;
-  secondary: string;
-  background: string;
-  cardBg: string;
-  textPrimary: string;
-  textSecondary: string;
-  border: string;
-}
-
-const PARTY_THEMES: Record<PartyCode, Record<ThemeMode, PartyTheme>> = {
-  dmj: {
-    classic: {
-      primary: '#004EA2',
-      primaryLight: '#E8F0FA',
-      primaryDark: '#003670',
-      primaryText: '#FFFFFF',
-      secondary: '#0073E6',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
-    },
-    dark: {
-      primary: '#4D9FFF',
-      primaryLight: '#1E3A5F',
-      primaryDark: '#003366',
-      primaryText: '#FFFFFF',
-      secondary: '#6BB8FF',
-      background: '#0D1B2A',
-      cardBg: '#1B2838',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#374151',
-    },
-  },
-  ppp: {
-    classic: {
-      primary: '#E61E2B',
-      primaryLight: '#FDECEE',
-      primaryDark: '#B8161F',
-      primaryText: '#FFFFFF',
-      secondary: '#00B5E2',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
-    },
-    dark: {
-      primary: '#FF6B78',
-      primaryLight: '#3D1A1D',
-      primaryDark: '#990011',
-      primaryText: '#FFFFFF',
-      secondary: '#00B5E2',
-      background: '#1A0A0A',
-      cardBg: '#2D1515',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#4A2020',
-    },
-  },
-  ind: {
-    classic: {
-      primary: '#6B7280',
-      primaryLight: '#F3F4F6',
-      primaryDark: '#4B5563',
-      primaryText: '#FFFFFF',
-      secondary: '#9CA3AF',
-      background: '#F5F5F5',
-      cardBg: '#FFFFFF',
-      textPrimary: '#1A1A1A',
-      textSecondary: '#6B7280',
-      border: '#E5E7EB',
-    },
-    dark: {
-      primary: '#A1A1AA',
-      primaryLight: '#27272A',
-      primaryDark: '#52525B',
-      primaryText: '#FFFFFF',
-      secondary: '#D4D4D8',
-      background: '#18181B',
-      cardBg: '#27272A',
-      textPrimary: '#E0E0E0',
-      textSecondary: '#9CA3AF',
-      border: '#3F3F46',
-    },
-  },
-};
-
-const PARTY_CODE_MAP: Record<string, PartyCode> = {
-  '더불어민주당': 'dmj',
-  '국민의힘': 'ppp',
-  '무소속': 'ind',
-};
-// ===== 테마 정의 끝 =====
+import { LogOut, Phone, Mail, MapPin, Clock, ExternalLink, Save } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -115,90 +10,11 @@ interface Candidate {
   candidate_code: string;
   region: string;
   district: string | null;
-  theme_mode: ThemeMode | null;
 }
 
 interface SettingsPageProps {
   candidateId: string;
   onLogout: () => void;
-}
-
-// 테마 미리보기 컴포넌트
-function ThemePreview({ 
-  theme, 
-  mode, 
-  isSelected, 
-  onClick 
-}: { 
-  theme: PartyTheme; 
-  mode: ThemeMode; 
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const isDark = mode === 'dark';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`relative flex-1 p-3 rounded-xl border-2 transition-all ${
-        isSelected 
-          ? 'border-blue-500 ring-2 ring-blue-200' 
-          : 'border-gray-200 hover:border-gray-300'
-      }`}
-      style={{ backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }}
-    >
-      {isSelected && (
-        <div className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-          <Check size={12} className="text-white" />
-        </div>
-      )}
-      
-      {/* 아이콘 */}
-      <div className="flex justify-center mb-2">
-        {isDark ? (
-          <Moon size={24} style={{ color: theme.primary }} />
-        ) : (
-          <Sun size={24} style={{ color: theme.primary }} />
-        )}
-      </div>
-      
-      {/* 미니 프리뷰 */}
-      <div 
-        className="rounded-lg p-2 mb-2"
-        style={{ backgroundColor: theme.background }}
-      >
-        <div 
-          className="rounded p-1.5 mb-1"
-          style={{ backgroundColor: theme.cardBg, border: `1px solid ${theme.border}` }}
-        >
-          <div 
-            className="h-1.5 w-8 rounded mb-1"
-            style={{ backgroundColor: theme.primary }}
-          />
-          <div 
-            className="h-1 w-12 rounded"
-            style={{ backgroundColor: theme.textSecondary }}
-          />
-        </div>
-        <div 
-          className="w-full py-1 rounded text-[8px] font-medium text-center"
-          style={{ 
-            backgroundColor: theme.primary,
-            color: theme.primaryText,
-          }}
-        >
-          버튼
-        </div>
-      </div>
-      
-      <p 
-        className="text-xs font-medium text-center"
-        style={{ color: isDark ? '#9CA3AF' : '#374151' }}
-      >
-        {isDark ? '다크 모드' : '클래식'}
-      </p>
-    </button>
-  );
 }
 
 export default function SettingsPage({ candidateId, onLogout }: SettingsPageProps) {
@@ -209,10 +25,8 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
     office_address: '',
     office_hours: '',
   });
-  const [themeMode, setThemeMode] = useState<ThemeMode>('classic');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingTheme, setSavingTheme] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -223,9 +37,6 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
 
       if (candidateRes.data) {
         setCandidate(candidateRes.data);
-        // colorful이 저장되어 있으면 classic으로 변환
-        const savedMode = candidateRes.data.theme_mode;
-        setThemeMode(savedMode === 'dark' ? 'dark' : 'classic');
       }
       if (contactRes.data) {
         setContact({
@@ -253,30 +64,6 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
     alert('저장되었습니다');
   };
 
-  const handleSaveTheme = async (mode: ThemeMode) => {
-    setSavingTheme(true);
-    setThemeMode(mode);
-    
-    const { error } = await supabase
-      .from('candidates')
-      .update({ theme_mode: mode })
-      .eq('id', candidateId);
-
-    setSavingTheme(false);
-    
-    if (!error) {
-      alert('테마가 저장되었습니다');
-    }
-  };
-
-  // 현재 정당의 테마 가져오기
-  const getPartyThemes = (): Record<ThemeMode, PartyTheme> | null => {
-    if (!candidate) return null;
-    const partyCode = PARTY_CODE_MAP[candidate.party];
-    if (!partyCode || !PARTY_THEMES[partyCode]) return null;
-    return PARTY_THEMES[partyCode];
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -284,8 +71,6 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
       </div>
     );
   }
-
-  const partyThemes = getPartyThemes();
 
   return (
     <div className="p-6">
@@ -327,36 +112,6 @@ export default function SettingsPage({ candidateId, onLogout }: SettingsPageProp
           <ExternalLink size={20} className="text-blue-500" />
         </div>
       </a>
-
-      {/* 테마 설정 */}
-      {partyThemes && (
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
-            <Palette size={16} />
-            테마 설정
-          </h2>
-          <p className="text-xs text-gray-400 mb-4">
-            유권자에게 보여지는 페이지의 테마를 선택하세요
-          </p>
-          
-          {/* 테마 선택 - 2개 */}
-          <div className="flex gap-3">
-            {(['classic', 'dark'] as ThemeMode[]).map((mode) => (
-              <ThemePreview
-                key={mode}
-                theme={partyThemes[mode]}
-                mode={mode}
-                isSelected={themeMode === mode}
-                onClick={() => handleSaveTheme(mode)}
-              />
-            ))}
-          </div>
-          
-          {savingTheme && (
-            <p className="text-xs text-blue-500 mt-2 text-center">저장 중...</p>
-          )}
-        </div>
-      )}
 
       {/* 연락처 설정 */}
       <div className="bg-white rounded-2xl p-4 border border-gray-100 mb-6">
