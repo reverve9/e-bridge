@@ -260,6 +260,9 @@ export default function CandidatePage() {
   // 갤러리 슬라이드 상태
   const [currentSlide, setCurrentSlide] = useState(0);
   
+  // 내 선거구 확인 드롭다운
+  const [showConstituencyInfo, setShowConstituencyInfo] = useState(false);
+  
   // 같은 당 후보 응원하기
   const [showPartyCandidatesModal, setShowPartyCandidatesModal] = useState(false);
   const [partyCandidates, setPartyCandidates] = useState<CandidateExt[]>([]);
@@ -1012,18 +1015,37 @@ export default function CandidatePage() {
         </button>
       </section>
 
-      {/* ========== 내 선거구 확인 ========== */}
+      {/* ========== D-Day + 내 선거구 확인 ========== */}
       <section className="px-4 mt-3">
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <MapPin size={18} style={{ color: partyColor }} />
-            <h3 className="font-bold text-gray-900">내 선거구 확인</h3>
+        <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
+          {/* D-Day (1/4) */}
+          <div className="w-1/4 flex flex-col items-center justify-center border-r border-gray-100 pr-4">
+            <span className="text-2xl font-bold" style={{ color: partyColor }}>
+              D-{Math.max(0, Math.ceil((new Date('2026-06-03').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
+            </span>
+            <span className="text-xs text-gray-400 mt-1">투표일</span>
           </div>
-          <p className="text-sm text-gray-500 mb-3">
-            내 선거구가 어디인지 모르시나요?
-          </p>
-          <div className="bg-gray-50 rounded-xl p-4 text-center">
-            <p className="text-sm text-gray-400">현재 조회기간이 아닙니다</p>
+          
+          {/* 내 선거구 확인 (3/4) */}
+          <div className="w-3/4">
+            <div 
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setShowConstituencyInfo(!showConstituencyInfo)}
+            >
+              <div className="flex items-center gap-2">
+                <MapPin size={16} style={{ color: partyColor }} />
+                <span className="font-medium text-gray-900 text-sm">내 선거구 확인</span>
+              </div>
+              <ChevronDown 
+                size={16} 
+                className={`text-gray-400 transition-transform ${showConstituencyInfo ? 'rotate-180' : ''}`}
+              />
+            </div>
+            {showConstituencyInfo && (
+              <div className="mt-3 bg-gray-50 rounded-xl p-3 text-center">
+                <p className="text-sm text-gray-400">현재 조회기간이 아닙니다</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
