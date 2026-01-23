@@ -16,6 +16,7 @@ import {
   Mail,
   Users,
   ChevronRight,
+  ThumbsUp,
 } from 'lucide-react';
 import { supabase, getPartyColor } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
@@ -242,6 +243,16 @@ export default function CandidatePage() {
   const [showAllFeeds, setShowAllFeeds] = useState(false);
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   const [cheerStartIndex, setCheerStartIndex] = useState(0);
+  const [expandedPledgeId, setExpandedPledgeId] = useState<string | null>(null);
+  const [likedPledges, setLikedPledges] = useState<Set<string>>(new Set());
+  
+  // localStorage에서 좋아요한 공약 불러오기
+  useEffect(() => {
+    const stored = localStorage.getItem('likedPledges');
+    if (stored) {
+      setLikedPledges(new Set(JSON.parse(stored)));
+    }
+  }, []);
   
   // 프로필/인사말 탭 상태
   const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
@@ -784,31 +795,87 @@ export default function CandidatePage() {
               <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
               <span style={{ color: partyColor }}>핵심공약</span>
             </h3>
-            <div className="space-y-2.5">
-              {(showAllPledges ? pledges : pledges.slice(0, 2)).map((pledge, idx) => (
-                <div key={pledge.id} className="flex items-start gap-2">
+            <div className="space-y-2">
+              {(showAllPledges ? pledges : pledges.slice(0, 4)).map((pledge, idx) => {
+                const isExpanded = expandedPledgeId === pledge.id;
+                const isLiked = likedPledges.has(pledge.id);
+                
+                return (
                   <div 
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"
-                    style={{ backgroundColor: partyColor, fontSize: '11px', fontWeight: 600 }}
+                    key={pledge.id} 
+                    className="rounded-xl p-3 cursor-pointer transition-all"
+                    style={{ backgroundColor: idx % 2 === 0 ? `${partyColor}08` : `${partyColor}04` }}
+                    onClick={() => setExpandedPledgeId(isExpanded ? null : pledge.id)}
                   >
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-gray-900 leading-snug" style={{ fontSize: '15px', fontWeight: 600 }}>{pledge.title}</h4>
-                    {pledge.description && (
-                      <p className="text-gray-500 leading-snug mt-0.5" style={{ fontSize: '13px' }}>{pledge.description}</p>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: partyColor }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </div>
+                      <h4 className="flex-1 text-gray-900 leading-snug" style={{ fontSize: '15px', fontWeight: 600 }}>
+                        {pledge.title}
+                      </h4>
+                      <ChevronDown 
+                        size={16} 
+                        className={`text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </div>
+                    
+                    {/* 펼쳐진 상태 */}
+                    {isExpanded && (
+                      <div className="mt-2 pl-7">
+                        {pledge.description && (
+                          <p className="text-gray-600 leading-relaxed mb-3" style={{ fontSize: '13px' }}>
+                            {pledge.description}
+                          </p>
+                        )}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (isLiked) return;
+                            
+                            await supabase.rpc('increment_pledge_likes', { pledge_id: pledge.id });
+                            
+                            // localStorage 업데이트
+                            const newLiked = new Set(likedPledges);
+                            newLiked.add(pledge.id);
+                            setLikedPledges(newLiked);
+                            localStorage.setItem('likedPledges', JSON.stringify([...newLiked]));
+                            
+                            // pledges 새로고침
+                            const { data } = await supabase
+                              .from('pledges')
+                              .select('*')
+                              .eq('candidate_id', candidate.id)
+                              .order('order');
+                            if (data) setPledges(data);
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${
+                            isLiked 
+                              ? 'bg-red-50 text-red-500' 
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          <ThumbsUp size={14} className={isLiked ? 'fill-current' : ''} />
+                          <span>{pledge.likes_count || 0}</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            {pledges.length > 3 && (
+            {pledges.length > 4 && (
               <div className="flex justify-end mt-3">
                 <button
                   onClick={() => setShowAllPledges(!showAllPledges)}
                   className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
                 >
-                  {showAllPledges ? '접기' : `더보기 (${pledges.length - 3}개)`}
+                  {showAllPledges ? '접기' : `더보기 (${pledges.length - 4}개)`}
                   <ChevronDown 
                     size={14} 
                     className={`transition-transform ${showAllPledges ? 'rotate-180' : ''}`}
