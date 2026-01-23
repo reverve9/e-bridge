@@ -31,7 +31,11 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
       .order('order', { ascending: true });
 
     if (data) {
-      setPledges(data.map((p, idx) => ({ ...p, order: p.order ?? idx })));
+      setPledges(data.map((p, idx) => ({ 
+        ...p, 
+        description: p.description || '',  // null 방지
+        order: p.order ?? idx 
+      })));
     }
     setLoading(false);
   };
@@ -164,7 +168,7 @@ export default function CandidatePledgeTab({ candidateId, onUpdate }: CandidateP
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
                 <textarea
-                  value={pledge.description}
+                  value={pledge.description || ''}
                   onChange={(e) => updatePledge(pledge.id, 'description', e.target.value)}
                   placeholder="상세 설명 (선택)"
                   rows={2}
