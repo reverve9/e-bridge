@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Camera, Newspaper, Trash2, Pin, X, Link, ExternalLink, Edit2 } from 'lucide-react';
+import { Plus, Camera, Newspaper, Trash2, Pin, X, Link, ExternalLink, Edit2, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Feed {
@@ -8,6 +8,7 @@ interface Feed {
   type: 'activity' | 'news' | 'notice';
   title: string;
   content: string | null;
+  summary: string | null;
   source_url: string | null;
   likes_count: number;
   published_at: string;
@@ -22,10 +23,12 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingFeed, setEditingFeed] = useState<Feed | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
   const [formData, setFormData] = useState({
     type: 'activity' as Feed['type'],
     title: '',
     content: '',
+    summary: '',
     source_url: '',
   });
 
@@ -46,7 +49,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
 
   const openCreateModal = () => {
     setEditingFeed(null);
-    setFormData({ type: 'activity', title: '', content: '', source_url: '' });
+    setFormData({ type: 'activity', title: '', content: '', summary: '', source_url: '' });
     setShowModal(true);
   };
 
@@ -56,9 +59,55 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
       type: feed.type,
       title: feed.title,
       content: feed.content || '',
+      summary: feed.summary || '',
       source_url: feed.source_url || '',
     });
     setShowModal(true);
+  };
+
+  // AI 요약 생성
+  const generateSummary = async () => {
+    if (!formData.content.trim() || formData.content.length < 20) {
+      alert('요약할 내용이 너무 짧습니다.');
+      return;
+    }
+
+    setSummarizing(true);
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 100,
+          messages: [
+            {
+              role: 'user',
+              content: `다음 선거 후보자의 소식/활동 내용을 뉴스 부제목 스타일로 한 줄(30자 이내)로 요약해주세요. 핵심 키워드 중심으로 간결하게 작성해주세요.
+
+제목: ${formData.title}
+내용: ${formData.content}
+
+요약:`
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const summary = data.content?.[0]?.text?.trim() || '';
+      
+      if (summary) {
+        setFormData({ ...formData, summary });
+      }
+    } catch (error) {
+      console.error('요약 생성 실패:', error);
+      alert('요약 생성에 실패했습니다.');
+    } finally {
+      setSummarizing(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -72,6 +121,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
           type: formData.type,
           title: formData.title,
           content: formData.content || null,
+          summary: formData.summary || null,
           source_url: formData.source_url || null,
         })
         .eq('id', editingFeed.id);
@@ -88,6 +138,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
         type: formData.type,
         title: formData.title,
         content: formData.content || null,
+        summary: formData.summary || null,
         source_url: formData.source_url || null,
       });
 
@@ -183,6 +234,12 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                 </div>
               </div>
               <h3 className="font-medium text-gray-900 mb-1">{feed.title}</h3>
+              {feed.summary && (
+                <p className="text-sm text-blue-600 mb-1 flex items-center gap-1">
+                  <Sparkles size={12} />
+                  {feed.summary}
+                </p>
+              )}
               {feed.content && (
                 <p className="text-sm text-gray-500 line-clamp-2">{feed.content}</p>
               )}
@@ -277,6 +334,43 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       placeholder="소식 내용을 입력하세요"
                     />
+                  </div>
+
+                  {/* AI 요약 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        <span className="flex items-center gap-1">
+                          <Sparkles size={14} className="text-blue-500" />
+                          한 줄 요약
+                        </span>
+                      </label>
+                      <button
+                        onClick={generateSummary}
+                        disabled={summarizing || !formData.content.trim()}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                      >
+                        {summarizing ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            생성 중...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={12} />
+                            AI 자동 생성
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.summary}
+                      onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="유권자 앱에 표시될 한 줄 요약"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">내용 입력 후 AI 자동 생성하거나 직접 작성하세요</p>
                   </div>
 
                   {/* 원문 링크 */}

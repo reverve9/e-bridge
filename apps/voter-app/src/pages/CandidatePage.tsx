@@ -76,6 +76,7 @@ interface Feed {
   type: string;
   title: string;
   content: string | null;
+  summary: string | null;
   source_url: string | null;
   likes_count: number;
   published_at: string;
@@ -150,25 +151,33 @@ function FeedItemComponent({
         <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(item.published_at)}</span>
       </div>
 
-      {/* 본문 */}
-      {item.content && (
-        <p className={`text-sm text-gray-600 mt-1 ${expanded ? '' : 'truncate'}`}>
-          {item.content}
-        </p>
-      )}
-
-      {/* 원문 링크 - 펼쳤을 때만 */}
-      {expanded && item.source_url && (
-        <a
-          href={item.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-block mt-2 text-xs font-medium"
-          style={{ color: partyColor }}
-        >
-          원문 보기 →
-        </a>
+      {/* 요약 (접힌 상태) 또는 본문 (펼친 상태) */}
+      {expanded ? (
+        <>
+          {item.content && (
+            <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+              {item.content}
+            </p>
+          )}
+          {item.source_url && (
+            <a
+              href={item.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-block mt-2 text-xs font-medium"
+              style={{ color: partyColor }}
+            >
+              원문 보기 →
+            </a>
+          )}
+        </>
+      ) : (
+        (item.summary || item.content) && (
+          <p className="text-sm text-gray-500 mt-1 truncate">
+            {item.summary || item.content}
+          </p>
+        )
       )}
     </div>
   );
