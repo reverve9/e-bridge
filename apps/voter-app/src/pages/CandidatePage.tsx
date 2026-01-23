@@ -240,7 +240,7 @@ export default function CandidatePage() {
   const [showAllPledges, setShowAllPledges] = useState(false);
   const [showAllFeeds, setShowAllFeeds] = useState(false);
   const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
-  const [cheerDisplayCount, setCheerDisplayCount] = useState(5);
+  const [cheerRollingIndex, setCheerRollingIndex] = useState(0);
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   
   // 프로필/인사말 탭 상태
@@ -266,10 +266,21 @@ export default function CandidatePage() {
     
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % galleryImages.length);
-    }, 3000);
+    }, 5000);
     
     return () => clearInterval(interval);
   }, [candidate]);
+
+  // 응원 메시지 롤링 (3초마다)
+  useEffect(() => {
+    if (cheers.length <= 5) return;
+    
+    const interval = setInterval(() => {
+      setCheerRollingIndex((prev) => (prev + 1) % cheers.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [cheers.length]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -855,17 +866,23 @@ export default function CandidatePage() {
               <span className="text-xs text-gray-400">{cheers.length}개</span>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-hidden">
             {cheers.length === 0 ? (
               <p className="text-center text-gray-400 py-4">첫 번째 응원을 남겨주세요!</p>
             ) : (
-              <>
-                {cheers.slice(0, cheerDisplayCount).map((cheer) => {
+              (() => {
+                // 5개씩 롤링 표시
+                const visibleCheers = [];
+                for (let i = 0; i < Math.min(5, cheers.length); i++) {
+                  const idx = (cheerRollingIndex + i) % cheers.length;
+                  visibleCheers.push(cheers[idx]);
+                }
+                return visibleCheers.map((cheer) => {
                   const isExpanded = expandedCheer === cheer.id;
                   return (
                     <div 
                       key={cheer.id} 
-                      className="cursor-pointer flex items-start gap-2"
+                      className="cursor-pointer flex items-start gap-2 transition-all duration-300"
                       onClick={() => setExpandedCheer(isExpanded ? null : cheer.id)}
                     >
                       <span className="font-semibold text-gray-900 text-sm w-14 flex-shrink-0">{cheer.name}</span>
@@ -883,8 +900,7 @@ export default function CandidatePage() {
                               .select('*')
                               .eq('candidate_id', candidate.id)
                               .eq('is_visible', true)
-                              .order('created_at', { ascending: false })
-                              .limit(50);
+                              .order('created_at', { ascending: false });
                             if (data) setCheers(data);
                           }}
                           className="text-gray-400 hover:text-red-500 flex items-center gap-0.5"
@@ -895,16 +911,8 @@ export default function CandidatePage() {
                       </div>
                     </div>
                   );
-                })}
-                {cheers.length > cheerDisplayCount && (
-                  <button
-                    onClick={() => setCheerDisplayCount(prev => prev + 5)}
-                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
-                  >
-                    응원 더보기 ({cheers.length - cheerDisplayCount}개)
-                  </button>
-                )}
-              </>
+                });
+              })()
             )}
           </div>
         </div>
