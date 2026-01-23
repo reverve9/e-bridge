@@ -1012,6 +1012,22 @@ export default function CandidatePage() {
         </button>
       </section>
 
+      {/* ========== 내 선거구 확인 ========== */}
+      <section className="px-4 mt-3">
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <MapPin size={18} style={{ color: partyColor }} />
+            <h3 className="font-bold text-gray-900">내 선거구 확인</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-3">
+            내 선거구가 어디인지 모르시나요?
+          </p>
+          <div className="bg-gray-50 rounded-xl p-4 text-center">
+            <p className="text-sm text-gray-400">현재 조회기간이 아닙니다</p>
+          </div>
+        </div>
+      </section>
+
       {/* ========== 연락사무소 푸터 ========== */}
       {(candidate.contact_address || candidate.contact_phone || candidate.contact_email) && (
         <footer className="bg-gray-100 px-6 py-6 mt-6">
