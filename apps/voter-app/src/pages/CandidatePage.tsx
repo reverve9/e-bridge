@@ -236,6 +236,9 @@ export default function CandidatePage() {
   const [showAllFeeds, setShowAllFeeds] = useState(false);
   const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
   const [cheerDisplayCount, setCheerDisplayCount] = useState(5);
+  
+  // 프로필/인사말 탭 상태
+  const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -547,113 +550,148 @@ export default function CandidatePage() {
         </section>
       )}
 
-      {/* ========== 프로필 섹션 (통합: 학력 + 경력 + 인사말) ========== */}
+      {/* ========== 프로필/인사말 탭 카드 ========== */}
       {(profile?.introduction || totalProfileItems > 0) && (
         <section className="px-4 mt-3">
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="font-bold mb-3 flex items-center gap-2">
-              <span className="w-1 h-5 rounded-full" style={{ backgroundColor: partyColor }} />
-              <span style={{ color: partyColor }}>프로필</span>
-            </h3>
-            
-            {/* 학력 */}
-            {educationList.length > 0 && (
-              <div className="mb-3">
-                <h4 className="text-xs font-semibold text-gray-400 mb-2">학력</h4>
-                <ul className="space-y-1">
-                  {(showAllProfile ? educationList : educationList.slice(0, 2)).map((edu: any, idx: number) => (
-                    <li key={`edu-${idx}`} className="text-sm text-gray-700">
-                      • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          {/* 탭 버튼 (파일철 스타일) */}
+          <div className="flex">
+            <button
+              onClick={() => { setProfileTab('profile'); setShowAllProfile(false); setShowAllIntro(false); }}
+              className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
+              style={profileTab === 'profile' 
+                ? { backgroundColor: 'white', color: partyColor, letterSpacing: '0.05em' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af', letterSpacing: '0.05em' }
+              }
+            >
+              프로필
+            </button>
+            <button
+              onClick={() => { setProfileTab('intro'); setShowAllProfile(false); setShowAllIntro(false); }}
+              className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
+              style={profileTab === 'intro'
+                ? { backgroundColor: 'white', color: partyColor, letterSpacing: '0.05em' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af', letterSpacing: '0.05em' }
+              }
+            >
+              인사말
+            </button>
+          </div>
+          
+          {/* 카드 본문 */}
+          <div className="bg-white rounded-b-2xl rounded-tr-2xl p-4 shadow-sm">
+            {profileTab === 'profile' ? (
+              <>
+                {/* 학력 */}
+                {educationList.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="text-xs font-semibold text-gray-400 mb-2">학력</h4>
+                    <ul className="space-y-1">
+                      {(showAllProfile ? educationList : educationList.slice(0, 2)).map((edu: any, idx: number) => (
+                        <li key={`edu-${idx}`} className="text-sm text-gray-700">
+                          • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-            {/* 경력 */}
-            {careerList.length > 0 && (
-              <div className="mb-3">
-                <h4 className="text-xs font-semibold text-gray-400 mb-2">주요 경력</h4>
-                <ul className="space-y-1.5">
-                  {(showAllProfile ? careerList : careerList.slice(0, 2)).map((c: any, idx: number) => (
-                    <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
-                      <span 
-                        className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
-                        style={c.is_current ? {
-                          backgroundColor: `${partyColor}20`,
-                          color: partyColor
-                        } : {
-                          backgroundColor: '#f3f4f6',
-                          color: '#9ca3af'
-                        }}
-                      >
-                        {c.is_current ? '現' : '前'}
-                      </span>
-                      <span className="text-gray-700">{c.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* 인사말 (드롭캡 스타일) */}
-            {profile?.introduction && (
-              <div className="text-sm text-gray-700 leading-relaxed mt-6">
-                {(() => {
-                  const intro = profile.introduction;
-                  const truncatedIntro = intro.length > 93 ? intro.slice(0, 93) + '...' : intro;
-                  
-                  return showAllProfile ? (
-                    <>
-                      <p className="whitespace-pre-line">
-                        <span 
-                          className="float-left mr-1.5 flex items-center justify-center text-white"
-                          style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
-                        >
-                          {intro[0]}
-                        </span>
-                        {intro.slice(1)}
-                      </p>
-                      {/* 이름 + 싸인 */}
-                      <div className="flex items-center justify-center gap-2 mt-4 clear-both">
-                        <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
-                        {(candidate as any).signature_url && (
-                          <img 
-                            src={(candidate as any).signature_url} 
-                            alt="싸인" 
-                            className="h-8 object-contain"
-                          />
+                {/* 경력 */}
+                {careerList.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-400 mb-2">주요 경력</h4>
+                    <ul className="space-y-1.5">
+                      {(showAllProfile ? careerList : careerList.slice(0, 2)).map((c: any, idx: number) => (
+                        <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
+                          <span 
+                            className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
+                            style={c.is_current ? {
+                              backgroundColor: `${partyColor}20`,
+                              color: partyColor
+                            } : {
+                              backgroundColor: '#f3f4f6',
+                              color: '#9ca3af'
+                            }}
+                          >
+                            {c.is_current ? '現' : '前'}
+                          </span>
+                          <span className="text-gray-700">{c.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* 프로필 더보기/접기 */}
+                {(educationList.length > 2 || careerList.length > 2) && (
+                  <div className="flex justify-end mt-3">
+                    <button
+                      onClick={() => setShowAllProfile(!showAllProfile)}
+                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+                    >
+                      {showAllProfile ? '접기' : '더보기'}
+                      <ChevronDown 
+                        size={14} 
+                        className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* 인사말 탭 */
+              profile?.introduction && (
+                <div className="text-sm text-gray-700 leading-relaxed">
+                  {(() => {
+                    const intro = profile.introduction;
+                    const truncatedIntro = intro.length > 200 ? intro.slice(0, 200) + '...' : intro;
+                    
+                    return (
+                      <>
+                        <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
+                          <span 
+                            className="float-left mr-1.5 flex items-center justify-center text-white"
+                            style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
+                          >
+                            {intro[0]}
+                          </span>
+                          {showAllIntro ? intro.slice(1) : truncatedIntro.slice(1)}
+                        </p>
+                        
+                        {/* 이름 + 싸인 (펼쳤을 때만) */}
+                        {showAllIntro && (
+                          <div className="flex items-center justify-center gap-2 mt-4 clear-both">
+                            <span className="text-sm italic text-gray-600">{candidate.name} 올림</span>
+                            {(candidate as any).signature_url && (
+                              <img 
+                                src={(candidate as any).signature_url} 
+                                alt="싸인" 
+                                className="h-8 object-contain"
+                              />
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </>
-                  ) : (
-                    <p>
-                      <span 
-                        className="float-left mr-1.5 flex items-center justify-center text-white"
-                        style={{ backgroundColor: partyColor, fontSize: '1.5rem', fontWeight: 800, width: '40px', height: '40px', borderRadius: '4px', fontFamily: "'S-CoreDream', sans-serif" }}
-                      >
-                        {intro[0]}
-                      </span>
-                      {truncatedIntro.slice(1)}
-                    </p>
-                  );
-                })()}
-              </div>
+                        
+                        {/* 인사말 더보기/접기 */}
+                        {intro.length > 200 && (
+                          <div className="flex justify-end mt-3 clear-both">
+                            <button
+                              onClick={() => setShowAllIntro(!showAllIntro)}
+                              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+                            >
+                              {showAllIntro ? '접기' : '더보기'}
+                              <ChevronDown 
+                                size={14} 
+                                className={`transition-transform ${showAllIntro ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )
             )}
-
-            {/* 더보기/접기 버튼 */}
-            <div className="flex justify-end mt-3">
-              <button
-                onClick={() => setShowAllProfile(!showAllProfile)}
-                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
-              >
-                {showAllProfile ? '접기' : '더보기'}
-                <ChevronDown 
-                  size={14} 
-                  className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`}
-                />
-              </button>
-            </div>
           </div>
         </section>
       )}
@@ -667,7 +705,7 @@ export default function CandidatePage() {
               <span style={{ color: partyColor }}>핵심공약</span>
             </h3>
             <div className="space-y-2.5">
-              {(showAllPledges ? pledges : pledges.slice(0, 3)).map((pledge, idx) => (
+              {(showAllPledges ? pledges : pledges.slice(0, 2)).map((pledge, idx) => (
                 <div key={pledge.id} className="flex items-start gap-2">
                   <div 
                     className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-0.5 shadow-sm"
