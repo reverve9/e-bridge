@@ -17,7 +17,9 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@e-bridge/ui": ["../../packages/ui/src/index.ts"],
+      "@e-bridge/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["src"],
