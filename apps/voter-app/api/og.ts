@@ -33,7 +33,7 @@ export default async function handler(request: Request) {
 
     const title = `${candidate.candidate_number || ''} ${candidate.name}`.trim();
     const description = candidate.slogan || `${candidate.party} 후보`;
-    const image = candidate.thumbnail_url || candidate.photo_url || 'https://ebridge.kr/og-default.png';
+    const image = candidate.photo_url || candidate.thumbnail_url || 'https://ebridge.kr/og-default.png';
     const pageUrl = `https://ebridge.kr/${partyCode}/${candidateCode}`;
 
     const html = `<!DOCTYPE html>
