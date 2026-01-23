@@ -318,13 +318,20 @@ export default function CandidatePage() {
 
       setCandidate(candidateData);
 
-      // 방문 기록 저장
-      const { error: visitError } = await supabase
-        .from('page_visits')
-        .insert({ candidate_id: candidateData.id });
+      // 방문 기록 저장 (1시간 중복 방지)
+      const visitKey = `visited_${candidateData.id}`;
+      const lastVisit = localStorage.getItem(visitKey);
+      const now = Date.now();
+      const oneHour = 60 * 60 * 1000;
       
-      if (visitError) {
-        console.error('방문 기록 저장 실패:', visitError);
+      if (!lastVisit || now - parseInt(lastVisit) > oneHour) {
+        const { error: visitError } = await supabase
+          .from('page_visits')
+          .insert({ candidate_id: candidateData.id });
+        
+        if (!visitError) {
+          localStorage.setItem(visitKey, now.toString());
+        }
       }
 
       const [profileRes, pledgesRes, feedsRes, cheersRes] = await Promise.all([
