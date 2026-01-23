@@ -1,5 +1,5 @@
 const CRAWLER_PATTERNS = [
-  'kakaotalk',
+  'kakaotalk-scrap',
   'facebookexternalhit',
   'facebot',
   'twitterbot',

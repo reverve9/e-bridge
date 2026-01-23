@@ -4,39 +4,18 @@ export const config = {
   runtime: 'edge',
 };
 
-// 크롤러 패턴
-const CRAWLER_PATTERNS = [
-  'kakaotalk-scrap',
-  'facebookexternalhit',
-  'facebot',
-  'twitterbot',
-  'linkedinbot',
-  'slackbot',
-  'telegrambot',
-  'whatsapp',
-  'discordbot',
-];
-
 export default async function handler(request: Request) {
   const url = new URL(request.url);
   const partyCode = url.searchParams.get('party');
   const candidateCode = url.searchParams.get('code');
   
   const pageUrl = `https://ebridge.kr/${partyCode}/${candidateCode}`;
-  
-  // User-Agent 확인 - 크롤러가 아니면 바로 리다이렉트
-  const userAgent = request.headers.get('user-agent')?.toLowerCase() || '';
-  const isCrawler = CRAWLER_PATTERNS.some(pattern => userAgent.includes(pattern));
-  
-  if (!isCrawler) {
-    return Response.redirect(pageUrl, 302);
-  }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey || !partyCode || !candidateCode) {
-    return Response.redirect(pageUrl, 302);
+    return defaultOgResponse();
   }
 
   try {
@@ -51,7 +30,7 @@ export default async function handler(request: Request) {
       .single();
 
     if (error || !candidate) {
-      return Response.redirect(pageUrl, 302);
+      return defaultOgResponse();
     }
 
     // 선거구 정보 조합
@@ -101,7 +80,7 @@ export default async function handler(request: Request) {
       },
     });
   } catch (e) {
-    return Response.redirect(pageUrl, 302);
+    return defaultOgResponse();
   }
 }
 
@@ -112,4 +91,27 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function defaultOgResponse() {
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>E-Bridge</title>
+  <meta property="og:title" content="E-Bridge">
+  <meta property="og:description" content="후보자와 유권자를 연결하는 플랫폼">
+  <meta property="og:image" content="https://ebridge.kr/og-default.png">
+  <meta property="og:site_name" content="E-Bridge">
+</head>
+<body>
+  <h1>E-Bridge</h1>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
 }
