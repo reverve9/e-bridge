@@ -151,11 +151,18 @@ function FeedItemComponent({
         <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(item.published_at)}</span>
       </div>
 
-      {/* 요약 (접힌 상태) 또는 본문 (펼친 상태) */}
+      {/* 요약문 (부제 스타일) - 항상 표시 */}
+      {item.summary && (
+        <p className={`text-sm font-medium italic mt-1 pl-3 ${expanded ? '' : 'truncate'}`} style={{ color: partyColor }}>
+          "{item.summary}"
+        </p>
+      )}
+
+      {/* 본문 - 펼침 상태에서만 표시 */}
       {expanded ? (
         <>
           {item.content && (
-            <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+            <p className="text-sm text-gray-600 mt-2 whitespace-pre-line leading-relaxed">
               {item.content}
             </p>
           )}
@@ -173,9 +180,10 @@ function FeedItemComponent({
           )}
         </>
       ) : (
-        (item.summary || item.content) && (
+        /* 요약이 없을 때만 본문 첫 줄 표시 */
+        !item.summary && item.content && (
           <p className="text-sm text-gray-500 mt-1 truncate">
-            {item.summary || item.content}
+            {item.content}
           </p>
         )
       )}
