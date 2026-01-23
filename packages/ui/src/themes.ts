@@ -50,7 +50,7 @@ const DARK_COLORS: ThemeColors = {
   // 텍스트
   textPrimary: '#F1F5F9',     // slate-100
   textSecondary: '#CBD5E1',   // slate-300 (더 밝게 수정)
-  textMuted: '#64748B',       // slate-500
+  textMuted: '#94A3B8',       // slate-400
   textInverse: '#0F172A',
   
   // 테두리
