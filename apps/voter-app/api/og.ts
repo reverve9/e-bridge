@@ -8,6 +8,7 @@ export default async function handler(request: Request) {
   const url = new URL(request.url);
   const partyCode = url.searchParams.get('party');
   const candidateCode = url.searchParams.get('code');
+  const isCheer = url.searchParams.get('cheer') === '1';
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
@@ -34,7 +35,12 @@ export default async function handler(request: Request) {
     // 선거구 정보 조합
     const electionInfo = [candidate.election_name, candidate.constituency].filter(Boolean).join(' ');
     const title = `${candidate.candidate_number || ''} ${candidate.name}`.trim();
-    const description = electionInfo || `${candidate.party} 후보`;
+    
+    // 응원 공유인 경우 다른 description
+    const description = isCheer 
+      ? `누군가 이 후보를 응원했어요! 🎉`
+      : (electionInfo || `${candidate.party} 후보`);
+    
     const image = candidate.photo_url || candidate.thumbnail_url || 'https://ebridge.kr/og-default.png';
     const pageUrl = `https://ebridge.kr/${partyCode}/${candidateCode}`;
 
