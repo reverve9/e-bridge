@@ -34,9 +34,7 @@ export default async function handler(request: Request) {
     // 선거구 정보 조합
     const electionInfo = [candidate.election_name, candidate.constituency].filter(Boolean).join(' ');
     const title = `${candidate.candidate_number || ''} ${candidate.name}`.trim();
-    const description = electionInfo 
-      ? `${electionInfo}\n${candidate.slogan || candidate.party + ' 후보'}`
-      : (candidate.slogan || `${candidate.party} 후보`);
+    const description = electionInfo || `${candidate.party} 후보`;
     const image = candidate.photo_url || candidate.thumbnail_url || 'https://ebridge.kr/og-default.png';
     const pageUrl = `https://ebridge.kr/${partyCode}/${candidateCode}`;
 
