@@ -20,7 +20,7 @@ interface FeedsPageProps {
 
 // Supabase URL에서 Edge Function URL 생성
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/generate-summary`;
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/quick-action`;
 
 export default function FeedsPage({ candidateId }: FeedsPageProps) {
   const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -82,7 +82,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           title: formData.title,
