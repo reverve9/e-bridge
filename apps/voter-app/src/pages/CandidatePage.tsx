@@ -69,6 +69,7 @@ interface Pledge {
   emoji: string;
   title: string;
   description: string | null;
+  likes_count: number;
 }
 
 interface Feed {
