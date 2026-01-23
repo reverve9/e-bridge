@@ -1148,8 +1148,17 @@ export default function CandidatePage() {
                 onClick={() => {
                   const shareUrl = `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`;
                   const shareText = `나도 ${candidate.candidate_number} ${candidate.name} 후보를 응원했어요! 🎉`;
-                  const kakaoUrl = `https://story.kakao.com/share?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
-                  window.open(kakaoUrl, '_blank', 'width=600,height=400');
+                  
+                  if (navigator.share) {
+                    navigator.share({
+                      title: `${candidate.candidate_number} ${candidate.name}`,
+                      text: shareText,
+                      url: shareUrl,
+                    });
+                  } else {
+                    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+                    alert('링크가 복사되었습니다!');
+                  }
                 }}
                 className="w-full py-3.5 rounded-xl font-semibold text-amber-900 flex items-center justify-center gap-2 mb-3"
                 style={{ backgroundColor: '#FEE500' }}
@@ -1157,7 +1166,7 @@ export default function CandidatePage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.89 5.29 4.68 6.68l-.86 3.18c-.1.37.32.68.65.48l3.89-2.57c.53.07 1.07.1 1.64.1 5.52 0 10-3.58 10-8s-4.48-8-10-8z"/>
                 </svg>
-                카카오톡으로 공유하기
+                친구에게 공유하기
               </button>
               
               <button
