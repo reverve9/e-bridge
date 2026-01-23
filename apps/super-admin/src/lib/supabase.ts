@@ -12,7 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // 정당 정보 (이름, 코드, 색상)
 export const PARTIES = {
-  '더불어민주당': { code: 'dmj', color: '#004EA2' },
+  '더불어민주당': { code: 'tmj', color: '#004EA2' },
   '국민의힘': { code: 'ppp', color: '#E61E2B' },
   '조국혁신당': { code: 'rnp', color: '#004098' },
   '개혁신당': { code: 'ref', color: '#FF6600' },

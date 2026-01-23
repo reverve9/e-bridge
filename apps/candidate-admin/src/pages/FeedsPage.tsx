@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Camera, Newspaper, Trash2, Pin, X, Link, ExternalLink } from 'lucide-react';
+import { Plus, Camera, Newspaper, Trash2, Pin, X, Link, ExternalLink, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Feed {
@@ -21,7 +21,8 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newFeed, setNewFeed] = useState({
+  const [editingFeed, setEditingFeed] = useState<Feed | null>(null);
+  const [formData, setFormData] = useState({
     type: 'activity' as Feed['type'],
     title: '',
     content: '',
@@ -43,21 +44,57 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
     fetchFeeds();
   }, [candidateId]);
 
-  const handleCreate = async () => {
-    if (!newFeed.title.trim()) return;
+  const openCreateModal = () => {
+    setEditingFeed(null);
+    setFormData({ type: 'activity', title: '', content: '', source_url: '' });
+    setShowModal(true);
+  };
 
-    const { error } = await supabase.from('feeds').insert({
-      candidate_id: candidateId,
-      type: newFeed.type,
-      title: newFeed.title,
-      content: newFeed.content || null,
-      source_url: newFeed.source_url || null,
+  const openEditModal = (feed: Feed) => {
+    setEditingFeed(feed);
+    setFormData({
+      type: feed.type,
+      title: feed.title,
+      content: feed.content || '',
+      source_url: feed.source_url || '',
     });
+    setShowModal(true);
+  };
 
-    if (!error) {
-      setShowModal(false);
-      setNewFeed({ type: 'activity', title: '', content: '', source_url: '' });
-      fetchFeeds();
+  const handleSubmit = async () => {
+    if (!formData.title.trim()) return;
+
+    if (editingFeed) {
+      // 수정
+      const { error } = await supabase
+        .from('feeds')
+        .update({
+          type: formData.type,
+          title: formData.title,
+          content: formData.content || null,
+          source_url: formData.source_url || null,
+        })
+        .eq('id', editingFeed.id);
+
+      if (!error) {
+        setShowModal(false);
+        setEditingFeed(null);
+        fetchFeeds();
+      }
+    } else {
+      // 생성
+      const { error } = await supabase.from('feeds').insert({
+        candidate_id: candidateId,
+        type: formData.type,
+        title: formData.title,
+        content: formData.content || null,
+        source_url: formData.source_url || null,
+      });
+
+      if (!error) {
+        setShowModal(false);
+        fetchFeeds();
+      }
     }
   };
 
@@ -102,7 +139,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">소식 관리</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium"
         >
           <Plus size={18} />
@@ -130,12 +167,20 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                   <span className="text-xs text-gray-300">·</span>
                   <span className="text-xs text-gray-400">{formatDate(feed.published_at)}</span>
                 </div>
-                <button
-                  onClick={() => handleDelete(feed.id)}
-                  className="p-1 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={16} className="text-red-400" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEditModal(feed)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <Edit2 size={16} className="text-gray-400" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(feed.id)}
+                    className="p-1 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 size={16} className="text-red-400" />
+                  </button>
+                </div>
               </div>
               <h3 className="font-medium text-gray-900 mb-1">{feed.title}</h3>
               {feed.content && (
@@ -160,7 +205,7 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
         </div>
       )}
 
-      {/* 새 소식 모달 (센터, 스크롤) */}
+      {/* 등록/수정 모달 */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -179,13 +224,15 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
             >
               {/* 모달 헤더 */}
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h2 className="text-lg font-bold">새 소식 등록</h2>
+                <h2 className="text-lg font-bold">
+                  {editingFeed ? '소식 수정' : '새 소식 등록'}
+                </h2>
                 <button onClick={() => setShowModal(false)}>
                   <X size={24} className="text-gray-400" />
                 </button>
               </div>
 
-              {/* 모달 컨텐츠 (스크롤) */}
+              {/* 모달 컨텐츠 */}
               <div className="p-4 overflow-y-auto flex-1">
                 <div className="space-y-4">
                   {/* 종류 선택 */}
@@ -195,9 +242,9 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                       {(['activity', 'news', 'notice'] as const).map((type) => (
                         <button
                           key={type}
-                          onClick={() => setNewFeed({ ...newFeed, type })}
+                          onClick={() => setFormData({ ...formData, type })}
                           className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                            newFeed.type === type
+                            formData.type === type
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-600'
                           }`}
@@ -213,8 +260,8 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">제목</label>
                     <input
                       type="text"
-                      value={newFeed.title}
-                      onChange={(e) => setNewFeed({ ...newFeed, title: e.target.value })}
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="소식 제목"
                     />
@@ -224,8 +271,8 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">내용</label>
                     <textarea
-                      value={newFeed.content}
-                      onChange={(e) => setNewFeed({ ...newFeed, content: e.target.value })}
+                      value={formData.content}
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                       rows={4}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       placeholder="소식 내용을 입력하세요"
@@ -239,8 +286,8 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
                       <Link size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         type="url"
-                        value={newFeed.source_url}
-                        onChange={(e) => setNewFeed({ ...newFeed, source_url: e.target.value })}
+                        value={formData.source_url}
+                        onChange={(e) => setFormData({ ...formData, source_url: e.target.value })}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="https://facebook.com/..."
                       />
@@ -253,11 +300,11 @@ export default function FeedsPage({ candidateId }: FeedsPageProps) {
               {/* 모달 푸터 */}
               <div className="p-4 border-t border-gray-100">
                 <button
-                  onClick={handleCreate}
-                  disabled={!newFeed.title.trim()}
+                  onClick={handleSubmit}
+                  disabled={!formData.title.trim()}
                   className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-semibold disabled:opacity-50"
                 >
-                  등록하기
+                  {editingFeed ? '수정하기' : '등록하기'}
                 </button>
               </div>
             </motion.div>

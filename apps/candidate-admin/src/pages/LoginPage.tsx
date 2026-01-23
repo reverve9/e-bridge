@@ -30,19 +30,32 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
 
-      const userId = authData.user?.id;
+      const userEmail = authData.user?.email;
 
-      // auth_user_id로 후보자 찾기
+      // admin_emails 배열에 이메일이 포함된 후보자 찾기
       const { data: candidate, error: candidateError } = await supabase
         .from('candidates')
         .select('id')
-        .eq('auth_user_id', userId)
+        .contains('admin_emails', [userEmail])
         .maybeSingle();
 
       if (candidateError || !candidate) {
-        setError('등록된 후보자 정보를 찾을 수 없습니다.');
-        await supabase.auth.signOut();
-        setLoading(false);
+        // 기존 방식 fallback (auth_user_id로 찾기)
+        const userId = authData.user?.id;
+        const { data: candidateFallback } = await supabase
+          .from('candidates')
+          .select('id')
+          .eq('auth_user_id', userId)
+          .maybeSingle();
+
+        if (!candidateFallback) {
+          setError('등록된 후보자 정보를 찾을 수 없습니다.');
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        onLogin(candidateFallback.id);
         return;
       }
 

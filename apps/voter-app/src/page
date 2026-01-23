@@ -240,7 +240,6 @@ export default function CandidatePage() {
   const [showAllFeeds, setShowAllFeeds] = useState(false);
   const [expandedCheer, setExpandedCheer] = useState<string | null>(null);
   const [cheerDisplayCount, setCheerDisplayCount] = useState(5);
-  const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   
   // 프로필/인사말 탭 상태
   const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
@@ -300,8 +299,8 @@ export default function CandidatePage() {
       const [profileRes, pledgesRes, feedsRes, cheersRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('candidate_id', candidateData.id).maybeSingle(),
         supabase.from('pledges').select('*').eq('candidate_id', candidateData.id).order('order'),
-        supabase.from('feeds').select('*').eq('candidate_id', candidateData.id).order('published_at', { ascending: false }),
-        supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false }),
+        supabase.from('feeds').select('*').eq('candidate_id', candidateData.id).order('published_at', { ascending: false }).limit(10),
+        supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false }).limit(10),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data);
@@ -812,24 +811,14 @@ export default function CandidatePage() {
             {feeds.length === 0 ? (
               <p className="text-center text-gray-400 py-4">등록된 소식이 없습니다</p>
             ) : (
-              <>
-                {feeds.slice(0, feedDisplayCount).map((item) => (
-                  <FeedItemComponent 
-                    key={item.id} 
-                    item={item} 
-                    partyColor={partyColor} 
-                    formatTime={formatTime}
-                  />
-                ))}
-                {feeds.length > feedDisplayCount && (
-                  <button
-                    onClick={() => setFeedDisplayCount(prev => prev + 5)}
-                    className="w-full py-3 text-sm text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100"
-                  >
-                    소식 더보기 ({feeds.length - feedDisplayCount}개)
-                  </button>
-                )}
-              </>
+              feeds.map((item) => (
+                <FeedItemComponent 
+                  key={item.id} 
+                  item={item} 
+                  partyColor={partyColor} 
+                  formatTime={formatTime}
+                />
+              ))
             )}
           </div>
         </div>
