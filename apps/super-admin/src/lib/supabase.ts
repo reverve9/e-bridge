@@ -61,6 +61,7 @@ export interface Candidate {
   slogan: string | null;
   candidate_code: string;
   login_email: string;
+  theme_mode: string;
   created_at: string;
 }
 

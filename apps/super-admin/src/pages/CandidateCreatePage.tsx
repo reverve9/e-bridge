@@ -76,6 +76,7 @@ export default function CandidateCreatePage() {
     constituency: '',
     login_email: '',
     login_password: '',
+    theme_mode: 'classic',
   });
 
   // 정당 코드 자동 계산
@@ -144,6 +145,7 @@ export default function CandidateCreatePage() {
       slogan: null,
       candidate_code: candidateCode,
       login_email: formData.login_email,
+      theme_mode: formData.theme_mode,
     };
 
     const { data, error } = await supabase
@@ -485,6 +487,39 @@ export default function CandidateCreatePage() {
                 후보자 측에 전달할 초기 비밀번호입니다.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* 테마 설정 */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">테마 설정</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">유권자 페이지 테마</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="theme_mode"
+                  value="classic"
+                  checked={formData.theme_mode === 'classic'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700">클래식 (라이트)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="theme_mode"
+                  value="dark"
+                  checked={formData.theme_mode === 'dark'}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-gray-700">다크</span>
+              </label>
+            </div>
+            <p className="mt-1 text-sm text-gray-500">유권자가 보는 후보자 페이지에 적용되는 테마입니다.</p>
           </div>
         </div>
 

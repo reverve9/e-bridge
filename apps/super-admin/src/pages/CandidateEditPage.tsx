@@ -37,6 +37,7 @@ export default function CandidateEditPage() {
     constituency: '',
     slogan: '',
     login_email: '',
+    theme_mode: 'classic',
   });
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function CandidateEditPage() {
           constituency: data.constituency || '',
           slogan: data.slogan || '',
           login_email: data.login_email,
+          theme_mode: data.theme_mode || 'classic',
         });
       }
       setLoading(false);
@@ -92,6 +94,7 @@ export default function CandidateEditPage() {
       constituency: formData.constituency || null,
       slogan: formData.slogan || null,
       login_email: formData.login_email,
+      theme_mode: formData.theme_mode,
     };
 
     const { error } = await supabase
@@ -251,6 +254,34 @@ export default function CandidateEditPage() {
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">테마 모드</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="theme_mode"
+                    value="classic"
+                    checked={formData.theme_mode === 'classic'}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-gray-700">클래식 (라이트)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="theme_mode"
+                    value="dark"
+                    checked={formData.theme_mode === 'dark'}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-gray-700">다크</span>
+                </label>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">유권자 페이지에 적용되는 테마입니다.</p>
             </div>
           </div>
         </div>
