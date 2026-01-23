@@ -1019,12 +1019,29 @@ export default function CandidatePage() {
       <section className="px-4 mt-3">
         <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-4">
           {/* D-Day (1/4) */}
-          <div className="w-1/4 flex flex-col items-center justify-center border-r border-gray-100 pr-4">
-            <span className="text-2xl font-bold" style={{ color: partyColor }}>
-              D-{Math.max(0, Math.ceil((new Date('2026-06-03').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
-            </span>
-            <span className="text-xs text-gray-400 mt-1">투표일</span>
-          </div>
+          {(() => {
+            const voteDate = new Date('2026-06-03T00:00:00+09:00');
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+            now.setHours(0, 0, 0, 0);
+            const diffDays = Math.max(0, Math.ceil((voteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+            const isUrgent = diffDays <= 7;
+            
+            return (
+              <div className="w-1/4 flex flex-col items-center justify-center border-r border-gray-100 pr-4">
+                <span 
+                  className="text-2xl"
+                  style={{ 
+                    fontFamily: "'S-CoreDream', sans-serif", 
+                    fontWeight: 800,
+                    color: isUrgent ? '#EF4444' : '#1F2937'
+                  }}
+                >
+                  D-{diffDays}
+                </span>
+                <span className="text-xs text-gray-400 mt-1">2026.6.3(수)</span>
+              </div>
+            );
+          })()}
           
           {/* 내 선거구 확인 (3/4) */}
           <div className="w-3/4">
