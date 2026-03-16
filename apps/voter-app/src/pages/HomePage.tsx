@@ -13,6 +13,7 @@ interface SearchResult {
   district: string | null;
   constituency: string | null;
   photo_url: string | null;
+  thumbnail_url: string | null;
 }
 
 export default function HomePage() {
@@ -30,7 +31,7 @@ export default function HomePage() {
 
     const { data } = await supabase
       .from('candidates')
-      .select('id, name, party, party_code, candidate_code, region, district, constituency, photo_url')
+      .select('id, name, party, party_code, candidate_code, region, district, constituency, photo_url, thumbnail_url')
       .eq('is_active', true)
       .or(`name.ilike.%${searchTerm}%,region.ilike.%${searchTerm}%,district.ilike.%${searchTerm}%,constituency.ilike.%${searchTerm}%`)
       .limit(10);
@@ -111,9 +112,9 @@ export default function HomePage() {
                       onClick={() => navigate(`/${candidate.party_code}/${candidate.candidate_code}`)}
                       className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left"
                     >
-                      {candidate.photo_url ? (
+                      {(candidate.thumbnail_url || candidate.photo_url) ? (
                         <img
-                          src={candidate.photo_url}
+                          src={candidate.thumbnail_url || candidate.photo_url!}
                           alt={candidate.name}
                           className="w-12 h-12 rounded-full object-cover"
                         />

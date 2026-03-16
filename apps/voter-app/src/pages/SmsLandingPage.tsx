@@ -108,6 +108,7 @@ interface CandidateExt {
   constituency_detail: string | null;
   candidate_number: string | null;
   photo_url: string | null;
+  thumbnail_url: string | null;
   gallery_images: string[] | null;
   slogan: string | null;
   tagline: string | null;
@@ -426,9 +427,9 @@ export default function SmsLandingPage() {
       <section className="px-4 py-4" style={{ backgroundColor: c.cardBg }}>
         <div className="flex items-center gap-4">
           {/* 프로필 이미지 */}
-          {candidate.photo_url ? (
+          {(candidate.thumbnail_url || candidate.photo_url) ? (
             <img
-              src={candidate.photo_url}
+              src={candidate.thumbnail_url || candidate.photo_url!}
               alt={candidate.name}
               className="w-20 h-20 rounded-full object-cover flex-shrink-0"
               style={{ border: `3px solid ${c.primary}` }}

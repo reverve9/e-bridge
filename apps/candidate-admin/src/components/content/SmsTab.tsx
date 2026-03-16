@@ -135,6 +135,7 @@ interface Candidate {
   region: string;
   district: string | null;
   photo_url: string | null;
+  thumbnail_url: string | null;
   candidate_number: string | null;
   election_name: string | null;
   constituency: string | null;
@@ -189,7 +190,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   useEffect(() => {
     const fetchData = async () => {
       const [candidateRes, pledgesRes, landingsRes] = await Promise.all([
-        supabase.from('candidates').select('name, party, party_code, candidate_code, region, district, photo_url, candidate_number, election_name, constituency').eq('id', candidateId).single(),
+        supabase.from('candidates').select('name, party, party_code, candidate_code, region, district, photo_url, thumbnail_url, candidate_number, election_name, constituency').eq('id', candidateId).single(),
         supabase.from('pledges').select('id, emoji, title').eq('candidate_id', candidateId).order('order'),
         supabase.from('sms_landings').select('*').eq('candidate_id', candidateId).order('created_at', { ascending: false }),
       ]);
@@ -520,9 +521,9 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               {/* 후보자 정보 */}
               <div className="bg-white px-4 py-4">
                 <div className="flex items-center gap-3">
-                  {candidate?.photo_url ? (
+                  {(candidate?.thumbnail_url || candidate?.photo_url) ? (
                     <img
-                      src={candidate.photo_url}
+                      src={candidate.thumbnail_url || candidate.photo_url!}
                       alt={candidate.name}
                       className="w-14 h-14 rounded-full object-cover flex-shrink-0 border-2 border-blue-500"
                     />
