@@ -175,6 +175,12 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
     setGeneratingLanding(true);
 
     try {
+      // 이전 랜딩페이지 삭제
+      await supabase
+        .from('sms_landings')
+        .delete()
+        .eq('candidate_id', candidateId);
+
       const { data, error } = await supabase
         .from('sms_landings')
         .insert({
@@ -192,6 +198,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
       const url = `ebridge.kr/${candidate.party_code}/${candidate.candidate_code}/${data.id}`;
       setLandingUrl(url);
+      setExistingLandings([]);
 
       // 목록 갱신
       const { data: landings } = await supabase
@@ -391,27 +398,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             </button>
           </div>
 
-          {/* 기존 랜딩페이지 목록 */}
-          {existingLandings.length > 1 && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">이전 랜딩페이지</label>
-              <div className="space-y-2">
-                {existingLandings.slice(1).map((landing) => (
-                  <div
-                    key={landing.id}
-                    className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg text-sm"
-                  >
-                    <span className="text-gray-500 truncate">
-                      https://ebridge.kr/{candidate?.party_code}/{candidate?.candidate_code}/{landing.id}
-                    </span>
-                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                      {new Date(landing.created_at).toLocaleDateString('ko-KR')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ===== 우측: 랜딩페이지 미리보기 ===== */}
