@@ -360,26 +360,6 @@ export default function SmsLandingPage() {
   // ========================================
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: c.background }}>
-      {/* ========== 상단 헤더 ========== */}
-      <header style={{ background: theme.header.background }}>
-        <div className="flex items-center justify-between px-4 py-[15px]">
-          {candidate.party_logo_url ? (
-            <img
-              src={candidate.party_logo_url}
-              alt={candidate.party}
-              className="h-[20px] w-auto object-contain brightness-0 invert"
-            />
-          ) : (
-            <span
-              className="text-sm font-bold"
-              style={{ color: theme.header.textColor }}
-            >
-              {candidate.party}
-            </span>
-          )}
-        </div>
-      </header>
-
       {/* ========== 후보자 정보 ========== */}
       <section className="px-4 py-4" style={{ backgroundColor: c.cardBg }}>
         <div className="flex items-center gap-4">
@@ -967,15 +947,6 @@ export default function SmsLandingPage() {
         </button>
       </section>
 
-      {/* ========== 면책 문구 ========== */}
-      <footer className="px-6 py-6" style={{ backgroundColor: c.border }}>
-        <p className="text-xs leading-relaxed mb-4" style={{ color: c.textMuted }}>
-          본 페이지에 게시된 모든 선거 관련 정보(공약, 프로필, 이미지 등)는 해당 후보자 또는 선거캠프가 직접 작성·제공한 것입니다. (주)나인브릿지는 플랫폼 기술 제공 및 운영만을 담당하며, 게시된 내용의 정확성·적법성에 대한 책임은 해당 후보자에게 있습니다.
-        </p>
-        <p className="text-xs text-center" style={{ color: c.textMuted }}>
-          © 2026 (주)나인브릿지. All rights reserved.
-        </p>
-      </footer>
     </div>
   );
 }
