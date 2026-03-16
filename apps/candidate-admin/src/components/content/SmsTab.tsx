@@ -180,8 +180,8 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  // 랜딩페이지 관련 상태
-  const [selectedSections, setSelectedSections] = useState<Set<string>>(new Set(['profile', 'pledges']));
+  // 랜딩페이지 관련 상태 (배열로 관리하여 클릭 순서 보존)
+  const [selectedSections, setSelectedSections] = useState<string[]>(['profile', 'pledges']);
   const [generatingLanding, setGeneratingLanding] = useState(false);
   const [landingUrl, setLandingUrl] = useState<string | null>(null);
   const [landingCopied, setLandingCopied] = useState(false);
@@ -213,7 +213,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
         if (latest.body) setBody(latest.body);
         if (latest.closing) setClosing(latest.closing);
         if (latest.selected_pledge_ids) setSelectedPledgeIds(new Set(latest.selected_pledge_ids));
-        if (latest.sections) setSelectedSections(new Set(latest.sections));
+        if (latest.sections) setSelectedSections(latest.sections);
       }
       setLoading(false);
     };
@@ -231,12 +231,9 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   };
 
   const toggleSection = (key: string) => {
-    setSelectedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setSelectedSections((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const selectedPledges = pledges.filter((p) => selectedPledgeIds.has(p.id));
@@ -313,7 +310,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           body: body.trim() || null,
           closing: closing.trim() || null,
           selected_pledge_ids: [...selectedPledgeIds],
-          sections: [...selectedSections],
+          sections: selectedSections,
         })
         .select('id')
         .single();
@@ -434,7 +431,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             <p className="text-xs text-gray-400 mb-3">문자 링크를 클릭했을 때 추가로 보여줄 섹션을 선택하세요</p>
             <div className="flex flex-wrap gap-2">
               {LANDING_SECTIONS.map((section) => {
-                const selected = selectedSections.has(section.key);
+                const selected = selectedSections.includes(section.key);
                 return (
                   <button
                     key={section.key}
@@ -586,9 +583,9 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               </div>
 
               {/* 선택된 섹션 표시 */}
-              {selectedSections.size > 0 && (
+              {selectedSections.length > 0 && (
                 <div className="px-4 mt-2 space-y-2">
-                  {LANDING_SECTIONS.filter(s => selectedSections.has(s.key)).map((section) => (
+                  {selectedSections.map((key) => LANDING_SECTIONS.find(s => s.key === key)!).filter(Boolean).map((section) => (
                     <div key={section.key} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
                       <span className="text-sm">{section.emoji}</span>
                       <span className="text-sm font-medium text-gray-600">{section.label}</span>

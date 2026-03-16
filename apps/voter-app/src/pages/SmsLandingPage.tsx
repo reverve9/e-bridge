@@ -997,7 +997,7 @@ export default function SmsLandingPage() {
       {/* ========== 전체 페이지 보기 CTA ========== */}
       <section className="px-4 mt-6 pb-6">
         <button
-          onClick={() => navigate(fullPageUrl)}
+          onClick={() => { window.scrollTo(0, 0); navigate(fullPageUrl); }}
           className="w-full rounded-2xl py-4 font-bold text-center transition-colors flex items-center justify-center gap-2"
           style={{
             backgroundColor: c.primary,

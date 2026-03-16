@@ -277,6 +277,11 @@ export default function CandidatePage() {
   const [expandedPledgeId, setExpandedPledgeId] = useState<string | null>(null);
   const [likedPledges, setLikedPledges] = useState<Set<string>>(new Set());
   
+  // 페이지 진입 시 스크롤 맨 위로
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [partyCode, candidateCode]);
+
   // localStorage에서 좋아요한 공약 불러오기
   useEffect(() => {
     const stored = localStorage.getItem('likedPledges');
