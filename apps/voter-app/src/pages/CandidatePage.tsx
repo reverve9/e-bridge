@@ -581,7 +581,7 @@ export default function CandidatePage() {
             <img
               src={theme.header.logoUrl}
               alt={candidate.party}
-              className="h-[40px] w-auto object-contain"
+              className="h-[30px] w-auto object-contain"
             />
           ) : candidate.party_logo_url ? (
             <img
@@ -663,58 +663,25 @@ export default function CandidatePage() {
                 />
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent flex items-end px-4 pb-3">
-                {candidate.slogan && (
-                  <p 
-                    className="font-score"
-                    style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF' }}
-                  >
-                    {candidate.slogan}
-                  </p>
-                )}
-              </div>
             </div>
           );
         })()}
       </section>
 
-      {/* ========== 선거구 + 기호/이름 영역 ========== */}
-      <section 
-        className="px-4 py-4"
-        style={{ backgroundColor: c.cardBg }}
-      >
-        <div className="grid grid-cols-2">
-          {/* 좌측: 선거구 정보 (오른쪽 정렬) */}
-          <div className="text-right pr-4">
-            <p 
-              className="font-semibold leading-tight" 
-              style={{ fontSize: '15px', color: c.textPrimary }}
-            >
-              {candidate.election_name} {candidate.constituency}
-            </p>
-            {candidate.constituency_detail && (
-              <p 
-                className="leading-tight" 
-                style={{ fontSize: '13px', color: c.textMuted }}
-              >
-                ({candidate.constituency_detail})
-              </p>
-            )}
-          </div>
-          
-          {/* 우측: 기호 + 이름 */}
-          <div className="flex items-center justify-center">
-            <p style={{ 
-              fontSize: '26px', 
-              fontWeight: 900, 
-              fontFamily: "'S-CoreDream', sans-serif", 
-              color: c.textPrimary 
-            }}>
-              {candidate.candidate_number} {candidate.name}
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* ========== 슬로건 바 ========== */}
+      {candidate.slogan && (
+        <section
+          className="px-4 py-3"
+          style={{ backgroundColor: c.primary }}
+        >
+          <p
+            className="font-score text-center"
+            style={{ fontSize: '16px', fontWeight: 700, color: c.primaryText }}
+          >
+            {candidate.slogan}
+          </p>
+        </section>
+      )}
 
       {/* ========== 태그라인 ========== */}
       {candidate.tagline && (
