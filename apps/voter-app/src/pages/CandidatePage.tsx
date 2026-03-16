@@ -581,7 +581,7 @@ export default function CandidatePage() {
             <img
               src={theme.header.logoUrl}
               alt={candidate.party}
-              className="h-[60px] w-auto object-contain"
+              className="h-[40px] w-auto object-contain"
             />
           ) : candidate.party_logo_url ? (
             <img
