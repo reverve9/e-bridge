@@ -733,7 +733,7 @@ export default function SmsLandingPage() {
                     <span style={{ color: c.primary }}>핵심공약</span>
                   </h3>
                   <div className="space-y-2">
-                    {(showAllPledges ? displayPledges : displayPledges.slice(0, 4)).map((pledge, idx) => {
+                    {(showAllPledges ? displayPledges : displayPledges.slice(0, 5)).map((pledge, idx) => {
                       const isExpanded = expandedPledgeId === pledge.id;
                       const isLiked = likedPledges.has(pledge.id);
                       return (
@@ -815,14 +815,14 @@ export default function SmsLandingPage() {
                       );
                     })}
                   </div>
-                  {displayPledges.length > 4 && (
+                  {displayPledges.length > 5 && (
                     <div className="flex justify-end mt-3">
                       <button
                         onClick={() => setShowAllPledges(!showAllPledges)}
                         className="text-xs flex items-center gap-0.5 hover:opacity-80"
                         style={{ color: c.textMuted }}
                       >
-                        {showAllPledges ? '접기' : `더보기 (${displayPledges.length - 4}개)`}
+                        {showAllPledges ? '접기' : `더보기 (${displayPledges.length - 5}개)`}
                         <ChevronDown size={14} className={`transition-transform ${showAllPledges ? 'rotate-180' : ''}`} />
                       </button>
                     </div>
