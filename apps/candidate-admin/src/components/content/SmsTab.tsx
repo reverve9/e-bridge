@@ -169,7 +169,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   };
 
   const handleGenerateLanding = async () => {
-    if (!candidate || selectedSections.size === 0) return;
+    if (!candidate) return;
     setGeneratingLanding(true);
 
     try {
@@ -322,7 +322,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           {/* 랜딩페이지 생성 버튼 */}
           <button
             onClick={handleGenerateLanding}
-            disabled={generatingLanding || selectedSections.size === 0}
+            disabled={generatingLanding}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {generatingLanding ? (
