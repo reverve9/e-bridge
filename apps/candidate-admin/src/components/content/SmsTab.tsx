@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2 } from 'lucide-react';
+import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight } from 'lucide-react';
 
 interface Candidate {
   name: string;
@@ -9,6 +9,10 @@ interface Candidate {
   candidate_code: string;
   region: string;
   district: string | null;
+  photo_url: string | null;
+  candidate_number: string | null;
+  election_name: string | null;
+  constituency: string | null;
 }
 
 interface Pledge {
@@ -56,12 +60,11 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [generatingLanding, setGeneratingLanding] = useState(false);
   const [landingUrl, setLandingUrl] = useState<string | null>(null);
   const [landingCopied, setLandingCopied] = useState(false);
-  const [existingLandings, setExistingLandings] = useState<SmsLanding[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       const [candidateRes, pledgesRes, landingsRes] = await Promise.all([
-        supabase.from('candidates').select('name, party, party_code, candidate_code, region, district').eq('id', candidateId).single(),
+        supabase.from('candidates').select('name, party, party_code, candidate_code, region, district, photo_url, candidate_number, election_name, constituency').eq('id', candidateId).single(),
         supabase.from('pledges').select('id, emoji, title').eq('candidate_id', candidateId).order('order'),
         supabase.from('sms_landings').select('*').eq('candidate_id', candidateId).order('created_at', { ascending: false }),
       ]);
@@ -76,14 +79,11 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
         setPledges(pledgesRes.data);
       }
       if (landingsRes.data && landingsRes.data.length > 0) {
-        setExistingLandings(landingsRes.data);
-        // 최신 랜딩페이지 URL 표시
         const latest = landingsRes.data[0];
         if (candidateRes.data) {
           const c = candidateRes.data;
           setLandingUrl(`ebridge.kr/${c.party_code}/${c.candidate_code}/${latest.id}`);
         }
-        // 최신 랜딩페이지 내용 복원
         if (latest.greeting) setGreeting(latest.greeting);
         if (latest.body) setBody(latest.body);
         if (latest.closing) setClosing(latest.closing);
@@ -142,7 +142,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
       lines.push('');
     }
 
-    // 랜딩페이지 URL이 있으면 그걸 사용, 없으면 기존 voter-app URL
     const linkUrl = landingUrl
       ? `https://${landingUrl}`
       : candidate ? `https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}` : '';
@@ -198,15 +197,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
       const url = `ebridge.kr/${candidate.party_code}/${candidate.candidate_code}/${data.id}`;
       setLandingUrl(url);
-      setExistingLandings([]);
-
-      // 목록 갱신
-      const { data: landings } = await supabase
-        .from('sms_landings')
-        .select('*')
-        .eq('candidate_id', candidateId)
-        .order('created_at', { ascending: false });
-      if (landings) setExistingLandings(landings);
     } catch (err) {
       console.error('랜딩페이지 생성 실패:', err);
       alert('랜딩페이지 생성에 실패했습니다.');
@@ -307,7 +297,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           {/* ===== 랜딩페이지 섹션 선택 ===== */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
             <label className="block text-sm font-semibold text-gray-700 mb-2">랜딩페이지 섹션 선택</label>
-            <p className="text-xs text-gray-400 mb-3">문자 링크를 클릭했을 때 보여줄 섹션을 선택하세요</p>
+            <p className="text-xs text-gray-400 mb-3">문자 링크를 클릭했을 때 추가로 보여줄 섹션을 선택하세요</p>
             <div className="flex flex-wrap gap-2">
               {LANDING_SECTIONS.map((section) => {
                 const selected = selectedSections.has(section.key);
@@ -368,18 +358,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             </div>
           )}
 
-          {/* 더보기 링크 (랜딩페이지가 없을 때만 기존 URL 표시) */}
-          {!landingUrl && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">더보기 링크</label>
-              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl text-sm text-gray-600">
-                <ExternalLink size={16} className="text-blue-500 flex-shrink-0" />
-                <span className="truncate">https://ebridge.kr/{candidate?.party_code}/{candidate?.candidate_code}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-2">랜딩페이지를 생성하면 이 링크가 랜딩페이지 URL로 변경됩니다</p>
-            </div>
-          )}
-
           {/* 버튼 */}
           <div className="flex gap-3">
             <button
@@ -397,36 +375,104 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               초기화
             </button>
           </div>
-
         </div>
 
-        {/* ===== 우측: 랜딩페이지 미리보기 ===== */}
+        {/* ===== 우측: 실시간 랜딩페이지 미리보기 ===== */}
         <div className="lg:sticky lg:top-6 lg:self-start">
           <label className="block text-sm font-semibold text-gray-700 mb-3">랜딩페이지 미리보기</label>
-          {landingUrl ? (
-            <div className="bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl" style={{ width: '375px' }}>
-              {/* 노치 */}
-              <div className="flex justify-center mb-1">
-                <div className="w-28 h-5 bg-gray-900 rounded-b-2xl" />
+          <div className="bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl mx-auto" style={{ width: '375px' }}>
+            {/* 노치 */}
+            <div className="flex justify-center mb-1">
+              <div className="w-28 h-5 bg-gray-900 rounded-b-2xl" />
+            </div>
+            <div className="rounded-[2rem] overflow-y-auto bg-gray-50" style={{ height: '680px' }}>
+              {/* 후보자 정보 */}
+              <div className="bg-white px-4 py-4">
+                <div className="flex items-center gap-3">
+                  {candidate?.photo_url ? (
+                    <img
+                      src={candidate.photo_url}
+                      alt={candidate.name}
+                      className="w-14 h-14 rounded-full object-cover flex-shrink-0 border-2 border-blue-500"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-bold text-blue-600">{candidate?.name?.[0]}</span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-400">
+                      {candidate?.election_name} {candidate?.constituency}
+                    </p>
+                    <p className="text-lg font-black">
+                      {candidate?.candidate_number} {candidate?.name}
+                    </p>
+                    <p className="text-xs font-medium text-blue-600">{candidate?.party}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-[2rem] overflow-hidden bg-white" style={{ height: '680px' }}>
-                <iframe
-                  key={landingUrl}
-                  src={`https://${landingUrl}`}
-                  className="w-full h-full border-0"
-                  title="랜딩페이지 미리보기"
-                />
+
+              {/* 문자 내용 */}
+              <div className="px-4 mt-2">
+                <div className="bg-white rounded-2xl p-4 shadow-sm">
+                  {/* 선거운동정보 */}
+                  <div className="bg-gray-100 rounded-lg px-3 py-2 mb-4">
+                    <span className="text-xs text-gray-500">(선거운동정보)</span>
+                  </div>
+
+                  {/* 공약 키워드 */}
+                  {selectedPledges.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-bold text-gray-800 mb-2">★ 후보자의 약속</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedPledges.map((p) => (
+                          <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                            {p.emoji} {p.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 인사말 */}
+                  {greeting.trim() && (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3 leading-relaxed">{greeting.trim()}</p>
+                  )}
+
+                  {/* 본문 */}
+                  {body.trim() && (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3 leading-relaxed">{body.trim()}</p>
+                  )}
+
+                  {/* 마무리 */}
+                  {closing.trim() && (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{closing.trim()}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* 선택된 섹션 표시 */}
+              {selectedSections.size > 0 && (
+                <div className="px-4 mt-2 space-y-2">
+                  {LANDING_SECTIONS.filter(s => selectedSections.has(s.key)).map((section) => (
+                    <div key={section.key} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
+                      <span className="text-sm">{section.emoji}</span>
+                      <span className="text-sm font-medium text-gray-600">{section.label}</span>
+                      <span className="ml-auto text-xs text-gray-300">섹션 영역</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 전체 페이지 보기 */}
+              <div className="px-4 mt-4 pb-4">
+                <div className="bg-blue-600 text-white rounded-xl py-3 text-center text-sm font-bold flex items-center justify-center gap-1">
+                  전체 페이지 보기
+                  <ChevronRight size={16} />
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50" style={{ width: '375px', height: '680px' }}>
-              <div className="text-center text-gray-400">
-                <Link2 size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">랜딩페이지를 생성하면</p>
-                <p className="text-sm">여기에 미리보기가 표시됩니다</p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
