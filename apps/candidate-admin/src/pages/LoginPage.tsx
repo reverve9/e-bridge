@@ -39,7 +39,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         .contains('admin_emails', [userEmail])
         .order('is_active', { ascending: false });
 
-      const activeCandidate = candidates?.find((c) => c.is_active !== false) || candidates?.[0];
+      const activeCandidate = candidates?.find((c) => c.is_active === true) || candidates?.[0];
 
       if (!activeCandidate) {
         // 기존 방식 fallback (auth_user_id로 찾기)
