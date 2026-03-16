@@ -372,11 +372,12 @@ export default function CandidatePage() {
         }
       }
 
-      const [profileRes, pledgesRes, feedsRes, cheersRes] = await Promise.all([
+      const [profileRes, pledgesRes, feedsRes, cheersRes, partyCandidatesRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('candidate_id', candidateData.id).maybeSingle(),
         supabase.from('pledges').select('*').eq('candidate_id', candidateData.id).order('order'),
         supabase.from('feeds').select('*').eq('candidate_id', candidateData.id).order('published_at', { ascending: false }),
         supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false }),
+        supabase.from('candidates').select('*').eq('party_code', candidateData.party_code).neq('id', candidateData.id).eq('is_active', true).order('name'),
       ]);
 
       if (profileRes.data) setProfile(profileRes.data);
@@ -387,6 +388,7 @@ export default function CandidatePage() {
       else setFeeds([]);
       if (cheersRes.data) setCheers(cheersRes.data);
       else setCheers([]);
+      if (partyCandidatesRes.data) setPartyCandidates(partyCandidatesRes.data);
 
       setLoading(false);
     };
@@ -1162,9 +1164,10 @@ export default function CandidatePage() {
       </section>
 
       {/* ========== 같은 당 후보 응원하기 ========== */}
+      {partyCandidates.length > 0 && (
       <section className="px-4 mt-3">
         <button
-          onClick={fetchPartyCandidates}
+          onClick={() => setShowPartyCandidatesModal(true)}
           className="w-full rounded-2xl p-4 shadow-sm flex items-center justify-between"
           style={{ 
             backgroundColor: c.cardBg,
@@ -1188,6 +1191,7 @@ export default function CandidatePage() {
           <ChevronRight size={20} style={{ color: c.textMuted }} />
         </button>
       </section>
+      )}
 
       {/* ========== D-Day + 내 선거구 확인 ========== */}
       <section className="px-4 mt-3">
@@ -1338,13 +1342,13 @@ export default function CandidatePage() {
           className="text-xs leading-relaxed mb-4"
           style={{ color: c.textMuted }}
         >
-          본 페이지에 게시된 모든 선거 관련 정보(공약, 프로필, 이미지 등)는 해당 후보자 또는 선거캠프가 직접 작성·제공한 것입니다. (주)나인브릿지는 플랫폼 기술 제공 및 운영만을 담당하며, 게시된 내용의 정확성·적법성에 대한 책임은 해당 후보자에게 있습니다.
+          본 페이지에 게시된 모든 선거 관련 정보(공약, 프로필, 이미지 등)는 해당 후보자 또는 선거캠프가 직접 작성·제공한 것입니다. (주)브릿지나인는 플랫폼 기술 제공 및 운영만을 담당하며, 게시된 내용의 정확성·적법성에 대한 책임은 해당 후보자에게 있습니다.
         </p>
         <p 
           className="text-xs text-center"
           style={{ color: c.textMuted }}
         >
-          © 2026 (주)나인브릿지. All rights reserved.
+          © 2026 (주)브릿지나인. All rights reserved.
         </p>
       </footer>
 
