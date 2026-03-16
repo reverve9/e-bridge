@@ -32,20 +32,23 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       const userEmail = authData.user?.email;
 
-      // admin_emails 배열에 이메일이 포함된 후보자 찾기
-      const { data: candidate, error: candidateError } = await supabase
+      // admin_emails 배열에 이메일이 포함된 후보자 찾기 (활성 후보자 우선)
+      const { data: candidates } = await supabase
         .from('candidates')
-        .select('id')
+        .select('id, is_active')
         .contains('admin_emails', [userEmail])
-        .maybeSingle();
+        .order('is_active', { ascending: false });
 
-      if (candidateError || !candidate) {
+      const activeCandidate = candidates?.find((c) => c.is_active !== false) || candidates?.[0];
+
+      if (!activeCandidate) {
         // 기존 방식 fallback (auth_user_id로 찾기)
         const userId = authData.user?.id;
         const { data: candidateFallback } = await supabase
           .from('candidates')
           .select('id')
           .eq('auth_user_id', userId)
+          .eq('is_active', true)
           .maybeSingle();
 
         if (!candidateFallback) {
@@ -59,7 +62,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
 
-      onLogin(candidate.id);
+      onLogin(activeCandidate.id);
     } catch (err) {
       setError('로그인 중 오류가 발생했습니다.');
     } finally {
