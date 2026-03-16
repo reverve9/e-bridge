@@ -21,6 +21,34 @@ import {
 } from '@e-bridge/ui';
 
 // ========================================
+// 마크다운 렌더링
+// ========================================
+function renderMarkdown(text: string) {
+  const parts: (string | JSX.Element)[] = [];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    if (match[2]) parts.push(<strong key={key++} className="font-bold">{match[2]}</strong>);
+    else if (match[3]) parts.push(<em key={key++} className="italic">{match[3]}</em>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
+function renderMarkdownBlock(text: string) {
+  return text.split('\n').map((line, i, arr) => (
+    <span key={i}>
+      {renderMarkdown(line)}
+      {i < arr.length - 1 && <br />}
+    </span>
+  ));
+}
+
+// ========================================
 // 테마 헬퍼
 // ========================================
 function getTheme(partyName: string, themeMode: string | null): Theme {
@@ -447,30 +475,30 @@ export default function SmsLandingPage() {
           {/* 인사말 */}
           {landing.greeting && (
             <p
-              className="text-sm whitespace-pre-wrap mb-3 leading-relaxed"
+              className="text-sm mb-3 leading-relaxed"
               style={{ color: c.textSecondary }}
             >
-              {landing.greeting}
+              {renderMarkdownBlock(landing.greeting)}
             </p>
           )}
 
           {/* 본문 */}
           {landing.body && (
             <p
-              className="text-sm whitespace-pre-wrap mb-3 leading-relaxed"
+              className="text-sm mb-3 leading-relaxed"
               style={{ color: c.textSecondary }}
             >
-              {landing.body}
+              {renderMarkdownBlock(landing.body)}
             </p>
           )}
 
           {/* 마무리 */}
           {landing.closing && (
             <p
-              className="text-sm whitespace-pre-wrap leading-relaxed"
+              className="text-sm leading-relaxed"
               style={{ color: c.textSecondary }}
             >
-              {landing.closing}
+              {renderMarkdownBlock(landing.closing)}
             </p>
           )}
         </div>

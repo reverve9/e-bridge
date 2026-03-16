@@ -1,6 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight } from 'lucide-react';
+import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle } from 'lucide-react';
+
+// 간단한 마크다운 렌더링 (볼드, 이탤릭, 줄바꿈)
+function renderMarkdown(text: string) {
+  const parts: (string | JSX.Element)[] = [];
+  // **bold** → <strong>, *italic* → <em>
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[2]) {
+      parts.push(<strong key={key++} className="font-bold">{match[2]}</strong>);
+    } else if (match[3]) {
+      parts.push(<em key={key++} className="italic">{match[3]}</em>);
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+}
+
+function renderMarkdownBlock(text: string) {
+  return text.split('\n').map((line, i, arr) => (
+    <span key={i}>
+      {renderMarkdown(line)}
+      {i < arr.length - 1 && <br />}
+    </span>
+  ));
+}
+
+// 도움말 팝오버 컴포넌트
+function HelpPopover({ content }: { content: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <HelpCircle size={15} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-50 w-56 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg whitespace-pre-line leading-relaxed">
+          {content}
+          <div className="absolute -top-1.5 right-2 w-3 h-3 bg-gray-800 rotate-45" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Candidate {
   name: string;
@@ -260,7 +328,10 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
           {/* 인사말 */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">인사말</label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-gray-700">인사말</label>
+              <HelpPopover content={"**굵게** → 볼드 처리\n*기울임* → 이탤릭 처리\n줄바꿈은 Enter로 입력"} />
+            </div>
             <textarea
               value={greeting}
               onChange={(e) => setGreeting(e.target.value)}
@@ -272,7 +343,10 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
           {/* 본문 */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">본문</label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-gray-700">본문</label>
+              <HelpPopover content={"**굵게** → 볼드 처리\n*기울임* → 이탤릭 처리\n줄바꿈은 Enter로 입력"} />
+            </div>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -284,7 +358,10 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
           {/* 마무리 인사 */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">마무리 인사</label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold text-gray-700">마무리 인사</label>
+              <HelpPopover content={"**굵게** → 볼드 처리\n*기울임* → 이탤릭 처리\n줄바꿈은 Enter로 입력"} />
+            </div>
             <textarea
               value={closing}
               onChange={(e) => setClosing(e.target.value)}
@@ -436,17 +513,17 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
 
                   {/* 인사말 */}
                   {greeting.trim() && (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3 leading-relaxed">{greeting.trim()}</p>
+                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(greeting.trim())}</p>
                   )}
 
                   {/* 본문 */}
                   {body.trim() && (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3 leading-relaxed">{body.trim()}</p>
+                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(body.trim())}</p>
                   )}
 
                   {/* 마무리 */}
                   {closing.trim() && (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{closing.trim()}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{renderMarkdownBlock(closing.trim())}</p>
                   )}
                 </div>
               </div>
