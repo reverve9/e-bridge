@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle } from 'lucide-react';
 
@@ -68,36 +68,62 @@ function renderMarkdownBlock(text: string) {
   return elements;
 }
 
-// 도움말 팝오버 컴포넌트
-function HelpPopover({ content }: { content: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+// 마크다운 도움말 항목
+const MARKDOWN_HELP = [
+  { input: '# 제목', result: <span className="text-xl font-bold">제목</span> },
+  { input: '## 소제목', result: <span className="text-lg font-bold">소제목</span> },
+  { input: '### 작은제목', result: <span className="text-base font-bold">작은제목</span> },
+  { input: '**굵게**', result: <span className="font-bold">굵게</span> },
+  { input: '*기울임*', result: <span className="italic">기울임</span> },
+  { input: '~~취소선~~', result: <span className="line-through">취소선</span> },
+  { input: '[링크](URL)', result: <span className="text-blue-600 underline">링크</span> },
+  { input: '- 목록', result: <span>• 목록</span> },
+  { input: '1. 번호목록', result: <span>1. 번호목록</span> },
+  { input: '> 인용문', result: <span className="text-gray-500 italic border-l-2 border-blue-400 pl-2">인용문</span> },
+];
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+// 도움말 모달 컴포넌트
+function MarkdownHelpButton() {
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative inline-block" ref={ref}>
+    <>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(true)}
         className="text-gray-400 hover:text-gray-600 transition-colors"
       >
         <HelpCircle size={15} />
       </button>
       {open && (
-        <div className="absolute right-0 top-6 z-50 w-56 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg whitespace-pre-line leading-relaxed">
-          {content}
-          <div className="absolute -top-1.5 right-2 w-3 h-3 bg-gray-800 rotate-45" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-[420px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="font-bold text-gray-800">서식 도움말</h3>
+              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <div className="overflow-y-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-blue-600">
+                    <th className="text-left px-6 py-3 font-medium">입력</th>
+                    <th className="text-left px-6 py-3 font-medium">결과</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MARKDOWN_HELP.map((item, i) => (
+                    <tr key={i} className="border-t border-gray-100">
+                      <td className="px-6 py-3.5 text-sm font-mono text-gray-600">{item.input}</td>
+                      <td className="px-6 py-3.5 text-sm text-gray-800">{item.result}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -361,7 +387,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-semibold text-gray-700">인사말</label>
-              <HelpPopover content={"# 제목 / ## 소제목 / ### 작은제목\n**굵게** / *기울임* / ~~취소선~~\n[링크텍스트](URL)\n- 목록 / 1. 번호목록\n> 인용문"} />
+              <MarkdownHelpButton />
             </div>
             <textarea
               value={greeting}
@@ -376,7 +402,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-semibold text-gray-700">본문</label>
-              <HelpPopover content={"# 제목 / ## 소제목 / ### 작은제목\n**굵게** / *기울임* / ~~취소선~~\n[링크텍스트](URL)\n- 목록 / 1. 번호목록\n> 인용문"} />
+              <MarkdownHelpButton />
             </div>
             <textarea
               value={body}
@@ -391,7 +417,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           <div className="bg-white rounded-2xl p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-semibold text-gray-700">마무리 인사</label>
-              <HelpPopover content={"# 제목 / ## 소제목 / ### 작은제목\n**굵게** / *기울임* / ~~취소선~~\n[링크텍스트](URL)\n- 목록 / 1. 번호목록\n> 인용문"} />
+              <MarkdownHelpButton />
             </div>
             <textarea
               value={closing}
