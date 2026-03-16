@@ -83,10 +83,12 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           const c = candidateRes.data;
           setLandingUrl(`ebridge.kr/${c.party_code}/${c.candidate_code}/${latest.id}`);
         }
-        // 최신 랜딩페이지의 섹션 선택 상태 복원
-        if (latest.sections) {
-          setSelectedSections(new Set(latest.sections));
-        }
+        // 최신 랜딩페이지 내용 복원
+        if (latest.greeting) setGreeting(latest.greeting);
+        if (latest.body) setBody(latest.body);
+        if (latest.closing) setClosing(latest.closing);
+        if (latest.selected_pledge_ids) setSelectedPledgeIds(new Set(latest.selected_pledge_ids));
+        if (latest.sections) setSelectedSections(new Set(latest.sections));
       }
       setLoading(false);
     };
