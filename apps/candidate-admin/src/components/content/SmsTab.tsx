@@ -347,15 +347,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                   <ExternalLink size={16} className="text-indigo-500 flex-shrink-0" />
                   <span className="truncate">https://{landingUrl}</span>
                 </div>
-                <a
-                  href={`https://${landingUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl text-sm font-medium hover:bg-indigo-200 transition-colors flex-shrink-0"
-                >
-                  <ExternalLink size={16} />
-                  미리보기
-                </a>
                 <button
                   onClick={handleCopyLandingUrl}
                   className="flex items-center gap-1.5 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
@@ -421,62 +412,33 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           )}
         </div>
 
-        {/* ===== 우측: 실시간 미리보기 ===== */}
+        {/* ===== 우측: 랜딩페이지 미리보기 ===== */}
         <div className="lg:sticky lg:top-6 lg:self-start">
-          <label className="block text-sm font-semibold text-gray-700 mb-3">미리보기</label>
-          <div className="bg-gradient-to-b from-gray-50 to-white shadow-lg rounded-3xl border border-gray-200 overflow-hidden">
-            {/* 상단 바 */}
-            <div className="bg-gray-100 px-5 py-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500">문자 메시지</span>
-              <span className="text-xs text-gray-400">{buildFullText().length}자</span>
-            </div>
-
-            {/* 메시지 본문 */}
-            <div className="p-5">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                {/* 법적 표기 */}
-                <div className="bg-gray-100 rounded-lg px-3 py-2 mb-3">
-                  <span className="text-xs text-gray-500">(선거운동정보)</span>
-                </div>
-
-                {/* 공약 키워드 */}
-                {selectedPledges.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-sm font-bold text-gray-800 mb-1">★ 후보자의 약속</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedPledges.map((p) => (
-                        <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                          {p.emoji} {p.title}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 인사말 */}
-                {greeting.trim() && (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{greeting.trim()}</p>
-                )}
-
-                {/* 본문 */}
-                {body.trim() && (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{body.trim()}</p>
-                )}
-
-                {/* 마무리 */}
-                {closing.trim() && (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">{closing.trim()}</p>
-                )}
-
-                {/* 더보기 링크 */}
-                <div className="border-t border-gray-100 pt-3 mt-2">
-                  <p className="text-xs text-blue-600 font-medium">
-                    ▶ 더 알아보기: https://{landingUrl || (candidate ? `ebridge.kr/${candidate.party_code}/${candidate.candidate_code}` : '')}
-                  </p>
-                </div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">랜딩페이지 미리보기</label>
+          {landingUrl ? (
+            <div className="bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl" style={{ width: '375px' }}>
+              {/* 노치 */}
+              <div className="flex justify-center mb-1">
+                <div className="w-28 h-5 bg-gray-900 rounded-b-2xl" />
+              </div>
+              <div className="rounded-[2rem] overflow-hidden bg-white" style={{ height: '680px' }}>
+                <iframe
+                  key={landingUrl}
+                  src={`https://${landingUrl}`}
+                  className="w-full h-full border-0"
+                  title="랜딩페이지 미리보기"
+                />
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50" style={{ width: '375px', height: '680px' }}>
+              <div className="text-center text-gray-400">
+                <Link2 size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">랜딩페이지를 생성하면</p>
+                <p className="text-sm">여기에 미리보기가 표시됩니다</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
