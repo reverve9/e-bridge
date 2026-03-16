@@ -44,6 +44,7 @@ export interface HeaderStyle {
   background: string;
   textColor: string;
   iconBgColor: string;
+  logoUrl?: string;
 }
 
 // 전체 테마 설정

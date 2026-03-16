@@ -577,14 +577,20 @@ export default function CandidatePage() {
       {/* ========== 상단 헤더 ========== */}
       <header style={{ background: theme.header.background }}>
         <div className="flex items-center justify-between px-4 py-[15px]">
-          {candidate.party_logo_url ? (
-            <img 
-              src={candidate.party_logo_url} 
+          {theme.header.logoUrl ? (
+            <img
+              src={theme.header.logoUrl}
+              alt={candidate.party}
+              className="h-[20px] w-auto object-contain"
+            />
+          ) : candidate.party_logo_url ? (
+            <img
+              src={candidate.party_logo_url}
               alt={candidate.party}
               className="h-[20px] w-auto object-contain brightness-0 invert"
             />
           ) : (
-            <span 
+            <span
               className="text-sm font-bold"
               style={{ color: theme.header.textColor }}
             >

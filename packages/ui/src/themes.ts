@@ -1,4 +1,6 @@
 import { ThemeColors, HeaderStyle, Theme, ThemeMode, PartyCode } from './types';
+import headerTmj from './assets/header-tmj.png';
+import logoTmj from './assets/logo-tmj.png';
 
 // ========================================
 // 클래식 테마 색상 (현재 하드코딩된 값 그대로)
@@ -127,14 +129,16 @@ const PARTY_BRAND: Record<PartyCode, PartyBrandColors> = {
 const PARTY_HEADERS: Record<PartyCode, { classic: HeaderStyle; dark: HeaderStyle }> = {
   dmj: {
     classic: {
-      background: 'linear-gradient(90deg, #00B050 0%, #00A0E0 50%, #004EA2 100%)',
+      background: `url(${headerTmj}) center/cover no-repeat`,
       textColor: '#FFFFFF',
       iconBgColor: 'rgba(255, 255, 255, 0.2)',
+      logoUrl: logoTmj,
     },
     dark: {
-      background: 'linear-gradient(90deg, #006030 0%, #006090 50%, #003670 100%)',
+      background: `url(${headerTmj}) center/cover no-repeat`,
       textColor: '#FFFFFF',
       iconBgColor: 'rgba(255, 255, 255, 0.15)',
+      logoUrl: logoTmj,
     },
   },
   ppp: {
