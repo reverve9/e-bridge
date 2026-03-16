@@ -347,6 +347,15 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                   <ExternalLink size={16} className="text-indigo-500 flex-shrink-0" />
                   <span className="truncate">https://{landingUrl}</span>
                 </div>
+                <a
+                  href={`https://${landingUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl text-sm font-medium hover:bg-indigo-200 transition-colors flex-shrink-0"
+                >
+                  <ExternalLink size={16} />
+                  미리보기
+                </a>
                 <button
                   onClick={handleCopyLandingUrl}
                   className="flex items-center gap-1.5 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"

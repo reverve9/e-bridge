@@ -97,9 +97,6 @@ interface Cheer {
 interface SmsLanding {
   id: number;
   candidate_id: string;
-  greeting: string | null;
-  body: string | null;
-  closing: string | null;
   selected_pledge_ids: string[];
   sections: string[];
 }
@@ -422,77 +419,6 @@ export default function SmsLandingPage() {
               {candidate.party}
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* ========== 문자 내용 카드 ========== */}
-      <section className="px-4 mt-3">
-        <div
-          className="rounded-2xl p-5 shadow-sm"
-          style={{
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none',
-          }}
-        >
-          {/* 선거운동정보 */}
-          <div
-            className="rounded-lg px-3 py-2 mb-4"
-            style={{ backgroundColor: c.cardBgAlt }}
-          >
-            <span className="text-xs" style={{ color: c.textMuted }}>
-              (선거운동정보)
-            </span>
-          </div>
-
-          {/* 공약 키워드 태그칩 */}
-          {selectedPledges.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-bold mb-2" style={{ color: c.textPrimary }}>
-                ★ 후보자의 약속
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedPledges.map((p) => (
-                  <span
-                    key={p.id}
-                    className="inline-block text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: c.primaryLight, color: c.primary }}
-                  >
-                    {p.emoji} {p.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 인사말 */}
-          {landing.greeting && (
-            <p
-              className="text-sm whitespace-pre-wrap mb-3 leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
-              {landing.greeting}
-            </p>
-          )}
-
-          {/* 본문 */}
-          {landing.body && (
-            <p
-              className="text-sm whitespace-pre-wrap mb-3 leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
-              {landing.body}
-            </p>
-          )}
-
-          {/* 마무리 */}
-          {landing.closing && (
-            <p
-              className="text-sm whitespace-pre-wrap leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
-              {landing.closing}
-            </p>
-          )}
         </div>
       </section>
 
