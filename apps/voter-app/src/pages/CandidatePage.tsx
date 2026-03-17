@@ -295,6 +295,8 @@ export default function CandidatePage() {
   const [cheerName, setCheerName] = useState('');
   const [cheerMessage, setCheerMessage] = useState('');
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
+  const [galleryTab, setGalleryTab] = useState<'image' | 'video'>('image');
+  const [showGalleryAll, setShowGalleryAll] = useState(false);
 
   // 프로필 더보기 상태
   const [showAllProfile, setShowAllProfile] = useState(false);
@@ -1095,7 +1097,16 @@ export default function CandidatePage() {
       </section>
 
       {/* ========== 갤러리 ========== */}
-      {gallery.length > 0 && (
+      {gallery.length > 0 && (() => {
+        const images = gallery.filter(g => g.type === 'image');
+        const videos = gallery.filter(g => g.type === 'video');
+        const currentItems = galleryTab === 'image' ? images : videos;
+        const GRID_MAX = 4;
+        const featured = currentItems[0];
+        const gridItems = currentItems.slice(1, GRID_MAX + 1);
+        const remaining = currentItems.length - (GRID_MAX + 1);
+
+        return (
       <section className="px-4 mt-3">
         <div
           className="rounded-2xl p-4 shadow-sm"
@@ -1104,61 +1115,131 @@ export default function CandidatePage() {
             border: theme.isDark ? `1px solid ${c.border}` : 'none'
           }}
         >
-          <h3 className="font-bold mb-3 flex items-center gap-2">
-            <span
-              className="w-1 h-5 rounded-full"
-              style={{ backgroundColor: c.primary }}
-            />
-            <span style={{ color: c.primary }}>갤러리</span>
-            <span
-              className="text-xs ml-1"
+          {/* 헤더 + 탭 */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold flex items-center gap-2">
+              <span
+                className="w-1 h-5 rounded-full"
+                style={{ backgroundColor: c.primary }}
+              />
+              <span style={{ color: c.primary }}>갤러리</span>
+            </h3>
+            <div
+              className="flex rounded-lg overflow-hidden text-xs"
+              style={{ border: `1px solid ${c.borderLight}` }}
+            >
+              <button
+                onClick={() => setGalleryTab('image')}
+                className="px-3 py-1.5 font-medium transition-colors"
+                style={{
+                  backgroundColor: galleryTab === 'image' ? c.primary : 'transparent',
+                  color: galleryTab === 'image' ? '#fff' : c.textMuted,
+                }}
+              >
+                사진 {images.length > 0 && <span className="ml-0.5">{images.length}</span>}
+              </button>
+              <button
+                onClick={() => setGalleryTab('video')}
+                className="px-3 py-1.5 font-medium transition-colors"
+                style={{
+                  backgroundColor: galleryTab === 'video' ? c.primary : 'transparent',
+                  color: galleryTab === 'video' ? '#fff' : c.textMuted,
+                }}
+              >
+                영상 {videos.length > 0 && <span className="ml-0.5">{videos.length}</span>}
+              </button>
+            </div>
+          </div>
+
+          {currentItems.length === 0 ? (
+            <p
+              className="text-center py-6 text-sm"
               style={{ color: c.textMuted }}
             >
-              {gallery.length}
-            </span>
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {gallery.map((item) => (
+              {galleryTab === 'image' ? '등록된 사진이 없습니다' : '등록된 영상이 없습니다'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {/* 첫번째 크게 */}
               <div
-                key={item.id}
-                className="relative rounded-xl overflow-hidden cursor-pointer group"
-                style={{ paddingBottom: '75%' }}
-                onClick={() => setSelectedGalleryItem(item)}
+                className="relative rounded-xl overflow-hidden cursor-pointer"
+                style={{ paddingBottom: galleryTab === 'video' ? '56.25%' : '66%' }}
+                onClick={() => setSelectedGalleryItem(featured)}
               >
-                {item.type === 'image' ? (
+                {featured.type === 'image' ? (
                   <img
-                    src={item.url}
-                    alt={item.caption || '갤러리 이미지'}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    src={featured.url}
+                    alt={featured.caption || '갤러리 이미지'}
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
                   <>
                     <img
-                      src={getVideoThumbnail(item.url, item.thumbnail_url) || ''}
-                      alt={item.caption || '영상 썸네일'}
+                      src={getVideoThumbnail(featured.url, featured.thumbnail_url) || ''}
+                      alt={featured.caption || '영상'}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        className="w-12 h-12 rounded-full flex items-center justify-center"
                         style={{ backgroundColor: c.primary }}
                       >
-                        <Play size={18} className="text-white ml-0.5" fill="white" />
+                        <Play size={22} className="text-white ml-0.5" fill="white" />
                       </div>
                     </div>
                   </>
                 )}
-                {item.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                    <p className="text-white text-xs truncate">{item.caption}</p>
+                {featured.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                    <p className="text-white text-sm">{featured.caption}</p>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+
+              {/* 나머지 그리드 */}
+              {gridItems.length > 0 && (
+                <div className="grid grid-cols-4 gap-1.5">
+                  {gridItems.map((item, idx) => {
+                    const isLast = idx === gridItems.length - 1 && remaining > 0;
+                    return (
+                      <div
+                        key={item.id}
+                        className="relative rounded-lg overflow-hidden cursor-pointer"
+                        style={{ paddingBottom: '100%' }}
+                        onClick={() => {
+                          if (isLast) {
+                            setShowGalleryAll(true);
+                          } else {
+                            setSelectedGalleryItem(item);
+                          }
+                        }}
+                      >
+                        <img
+                          src={item.type === 'image' ? item.url : (getVideoThumbnail(item.url, item.thumbnail_url) || '')}
+                          alt={item.caption || ''}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        {item.type === 'video' && !isLast && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play size={14} className="text-white" fill="white" />
+                          </div>
+                        )}
+                        {isLast && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                            <span className="text-white text-sm font-bold">+{remaining}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
-      )}
+        );
+      })()}
 
       {/* ========== 응원 메시지 ========== */}
       <section className="px-4 pb-6 mt-3">
@@ -1641,6 +1722,65 @@ export default function CandidatePage() {
                 닫기
               </button>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== 갤러리 전체보기 모달 ========== */}
+      <AnimatePresence>
+        {showGalleryAll && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col"
+            style={{ backgroundColor: c.cardBg }}
+          >
+            {/* 모달 헤더 */}
+            <div
+              className="flex items-center justify-between px-4 py-3 border-b"
+              style={{ borderColor: c.border }}
+            >
+              <h3
+                className="font-bold"
+                style={{ color: c.textPrimary }}
+              >
+                {galleryTab === 'image' ? '사진' : '영상'} 전체보기
+              </h3>
+              <button onClick={() => setShowGalleryAll(false)}>
+                <X size={24} style={{ color: c.textMuted }} />
+              </button>
+            </div>
+            {/* 그리드 */}
+            <div className="flex-1 overflow-y-auto p-2">
+              <div className="grid grid-cols-3 gap-1.5">
+                {(galleryTab === 'image'
+                  ? gallery.filter(g => g.type === 'image')
+                  : gallery.filter(g => g.type === 'video')
+                ).map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative rounded-lg overflow-hidden cursor-pointer"
+                    style={{ paddingBottom: '100%' }}
+                    onClick={() => {
+                      setShowGalleryAll(false);
+                      setSelectedGalleryItem(item);
+                    }}
+                  >
+                    <img
+                      src={item.type === 'image' ? item.url : (getVideoThumbnail(item.url, item.thumbnail_url) || '')}
+                      alt={item.caption || ''}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {item.type === 'video' && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Play size={18} className="text-white" fill="white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
