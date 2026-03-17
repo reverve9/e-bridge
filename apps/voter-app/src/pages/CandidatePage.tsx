@@ -17,6 +17,8 @@ import {
   Users,
   ChevronRight,
   ThumbsUp,
+  Image,
+  Play,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
@@ -108,6 +110,31 @@ interface Cheer {
   message: string;
   likes_count: number;
   created_at: string;
+}
+
+interface GalleryItem {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  thumbnail_url: string | null;
+  caption: string | null;
+  sort_order: number;
+}
+
+// ========================================
+// 유틸 함수
+// ========================================
+
+function getYoutubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+function getVideoThumbnail(url: string, thumbnailUrl: string | null): string | null {
+  if (thumbnailUrl) return thumbnailUrl;
+  const ytId = getYoutubeId(url);
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+  return null;
 }
 
 // ========================================
@@ -260,13 +287,15 @@ export default function CandidatePage() {
   const [pledges, setPledges] = useState<Pledge[]>([]);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [cheers, setCheers] = useState<Cheer[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCheerModal, setShowCheerModal] = useState(false);
   const [showCheerCompleteModal, setShowCheerCompleteModal] = useState(false);
   const [selectedCheer, setSelectedCheer] = useState<Cheer | null>(null);
   const [cheerName, setCheerName] = useState('');
   const [cheerMessage, setCheerMessage] = useState('');
-  
+  const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
+
   // 프로필 더보기 상태
   const [showAllProfile, setShowAllProfile] = useState(false);
   const [showAllIntro, setShowAllIntro] = useState(false);
@@ -372,11 +401,12 @@ export default function CandidatePage() {
         }
       }
 
-      const [profileRes, pledgesRes, feedsRes, cheersRes, partyCandidatesRes] = await Promise.all([
+      const [profileRes, pledgesRes, feedsRes, cheersRes, galleryRes, partyCandidatesRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('candidate_id', candidateData.id).maybeSingle(),
         supabase.from('pledges').select('*').eq('candidate_id', candidateData.id).order('order'),
         supabase.from('feeds').select('*').eq('candidate_id', candidateData.id).order('published_at', { ascending: false }),
         supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false }),
+        supabase.from('gallery').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('sort_order'),
         supabase.from('candidates').select('*').eq('party_code', candidateData.party_code).neq('id', candidateData.id).eq('is_active', true).order('name'),
       ]);
 
@@ -388,6 +418,8 @@ export default function CandidatePage() {
       else setFeeds([]);
       if (cheersRes.data) setCheers(cheersRes.data);
       else setCheers([]);
+      if (galleryRes.data) setGallery(galleryRes.data);
+      else setGallery([]);
       if (partyCandidatesRes.data) setPartyCandidates(partyCandidatesRes.data);
 
       setLoading(false);
@@ -1062,6 +1094,72 @@ export default function CandidatePage() {
         </div>
       </section>
 
+      {/* ========== 갤러리 ========== */}
+      {gallery.length > 0 && (
+      <section className="px-4 mt-3">
+        <div
+          className="rounded-2xl p-4 shadow-sm"
+          style={{
+            backgroundColor: c.cardBg,
+            border: theme.isDark ? `1px solid ${c.border}` : 'none'
+          }}
+        >
+          <h3 className="font-bold mb-3 flex items-center gap-2">
+            <span
+              className="w-1 h-5 rounded-full"
+              style={{ backgroundColor: c.primary }}
+            />
+            <span style={{ color: c.primary }}>갤러리</span>
+            <span
+              className="text-xs ml-1"
+              style={{ color: c.textMuted }}
+            >
+              {gallery.length}
+            </span>
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {gallery.map((item) => (
+              <div
+                key={item.id}
+                className="relative rounded-xl overflow-hidden cursor-pointer group"
+                style={{ paddingBottom: '75%' }}
+                onClick={() => setSelectedGalleryItem(item)}
+              >
+                {item.type === 'image' ? (
+                  <img
+                    src={item.url}
+                    alt={item.caption || '갤러리 이미지'}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <>
+                    <img
+                      src={getVideoThumbnail(item.url, item.thumbnail_url) || ''}
+                      alt={item.caption || '영상 썸네일'}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: c.primary }}
+                      >
+                        <Play size={18} className="text-white ml-0.5" fill="white" />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {item.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                    <p className="text-white text-xs truncate">{item.caption}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      )}
+
       {/* ========== 응원 메시지 ========== */}
       <section className="px-4 pb-6 mt-3">
         <div 
@@ -1542,6 +1640,66 @@ export default function CandidatePage() {
               >
                 닫기
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ========== 갤러리 뷰어 모달 ========== */}
+      <AnimatePresence>
+        {selectedGalleryItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
+            onClick={() => setSelectedGalleryItem(null)}
+          >
+            <button
+              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white"
+              onClick={() => setSelectedGalleryItem(null)}
+            >
+              <X size={28} />
+            </button>
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg mx-4"
+            >
+              {selectedGalleryItem.type === 'image' ? (
+                <img
+                  src={selectedGalleryItem.url}
+                  alt={selectedGalleryItem.caption || '갤러리 이미지'}
+                  className="w-full rounded-xl"
+                />
+              ) : (
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  {getYoutubeId(selectedGalleryItem.url) ? (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${getYoutubeId(selectedGalleryItem.url)}?autoplay=1`}
+                      className="absolute inset-0 w-full h-full rounded-xl"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={selectedGalleryItem.url}
+                      className="absolute inset-0 w-full h-full rounded-xl object-contain"
+                      controls
+                      autoPlay
+                    />
+                  )}
+                </div>
+              )}
+              {selectedGalleryItem.caption && (
+                <p className="text-white/80 text-sm text-center mt-3">
+                  {selectedGalleryItem.caption}
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}
