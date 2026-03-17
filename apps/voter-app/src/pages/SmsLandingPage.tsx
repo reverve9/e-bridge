@@ -9,6 +9,8 @@ import {
   Mail,
   ThumbsUp,
   ChevronRight,
+  Play,
+  Image,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
@@ -157,6 +159,15 @@ interface Cheer {
   created_at: string;
 }
 
+interface GalleryItem {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  thumbnail_url: string | null;
+  caption: string | null;
+  sort_order: number;
+}
+
 interface SmsLanding {
   id: number;
   candidate_id: string;
@@ -165,6 +176,21 @@ interface SmsLanding {
   closing: string | null;
   selected_pledge_ids: string[];
   sections: string[];
+}
+
+// ========================================
+// 유틸 함수
+// ========================================
+function getYoutubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+function getVideoThumbnail(url: string, thumbnailUrl: string | null): string | null {
+  if (thumbnailUrl) return thumbnailUrl;
+  const ytId = getYoutubeId(url);
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+  return null;
 }
 
 // ========================================
@@ -273,6 +299,7 @@ export default function SmsLandingPage() {
   const [pledges, setPledges] = useState<Pledge[]>([]);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [cheers, setCheers] = useState<Cheer[]>([]);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // UI 상태
@@ -354,8 +381,13 @@ export default function SmsLandingPage() {
         const res = await supabase.from('cheers').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('created_at', { ascending: false });
         if (res.data) setCheers(res.data);
       };
+      const fetchGallery = async () => {
+        if (!sections.has('gallery')) return;
+        const res = await supabase.from('gallery').select('*').eq('candidate_id', candidateData.id).eq('is_visible', true).order('sort_order');
+        if (res.data) setGallery(res.data);
+      };
 
-      await Promise.all([fetchProfile(), fetchPledges(), fetchFeeds(), fetchCheers()]);
+      await Promise.all([fetchProfile(), fetchPledges(), fetchFeeds(), fetchCheers(), fetchGallery()]);
 
       // 방문 기록
       const visitKey = `visited_landing_${landingData.id}`;
@@ -943,6 +975,50 @@ export default function SmsLandingPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              </section>
+            );
+
+          case 'gallery':
+            if (gallery.length === 0) return null;
+            return (
+              <section key="gallery" className="px-4 mt-3">
+                <div
+                  className="rounded-2xl p-4 shadow-sm"
+                  style={{
+                    backgroundColor: c.cardBg,
+                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
+                  }}
+                >
+                  <h3 className="font-bold mb-3 flex items-center gap-2">
+                    <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
+                    <span style={{ color: c.primary }}>갤러리</span>
+                  </h3>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {gallery.slice(0, 6).map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative rounded-lg overflow-hidden"
+                        style={{ paddingBottom: '100%' }}
+                      >
+                        <img
+                          src={item.type === 'image' ? item.url : (getVideoThumbnail(item.url, item.thumbnail_url) || '')}
+                          alt={item.caption || ''}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        {item.type === 'video' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play size={16} className="text-white" fill="white" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {gallery.length > 6 && (
+                    <p className="text-center text-xs mt-2" style={{ color: c.textMuted }}>
+                      +{gallery.length - 6}장 더보기
+                    </p>
+                  )}
                 </div>
               </section>
             );

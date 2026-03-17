@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronDown,
+  ChevronLeft,
   MessageCircle,
   Heart,
   Send,
@@ -1878,64 +1879,107 @@ export default function CandidatePage() {
         )}
       </AnimatePresence>
 
-      {/* ========== 갤러리 뷰어 모달 ========== */}
+      {/* ========== 갤러리 뷰어 모달 (스와이프 지원) ========== */}
       <AnimatePresence>
-        {selectedGalleryItem && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
-            onClick={() => setSelectedGalleryItem(null)}
-          >
-            <button
-              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white"
+        {selectedGalleryItem && (() => {
+          const currentIdx = gallery.findIndex(g => g.id === selectedGalleryItem.id);
+          const hasPrev = currentIdx > 0;
+          const hasNext = currentIdx < gallery.length - 1;
+          return (
+            <motion.div
+              key="gallery-viewer"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
               onClick={() => setSelectedGalleryItem(null)}
             >
-              <X size={28} />
-            </button>
+              <button
+                className="absolute top-4 right-4 z-10 text-white/80 hover:text-white"
+                onClick={() => setSelectedGalleryItem(null)}
+              >
+                <X size={28} />
+              </button>
 
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg mx-4"
-            >
-              {selectedGalleryItem.type === 'image' ? (
-                <img
-                  src={selectedGalleryItem.url}
-                  alt={selectedGalleryItem.caption || '갤러리 이미지'}
-                  className="w-full rounded-xl"
-                />
-              ) : (
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  {getYoutubeId(selectedGalleryItem.url) ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${getYoutubeId(selectedGalleryItem.url)}?autoplay=1`}
-                      className="absolute inset-0 w-full h-full rounded-xl"
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video
-                      src={selectedGalleryItem.url}
-                      className="absolute inset-0 w-full h-full rounded-xl object-contain"
-                      controls
-                      autoPlay
-                    />
-                  )}
-                </div>
+              {/* 카운터 */}
+              <div className="absolute top-4 left-4 z-10 text-white/70 text-sm font-medium">
+                {currentIdx + 1} / {gallery.length}
+              </div>
+
+              {/* 이전 버튼 */}
+              {hasPrev && (
+                <button
+                  className="absolute left-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
+                  onClick={(e) => { e.stopPropagation(); setSelectedGalleryItem(gallery[currentIdx - 1]); }}
+                >
+                  <ChevronLeft size={24} />
+                </button>
               )}
-              {selectedGalleryItem.caption && (
-                <p className="text-white/80 text-sm text-center mt-3">
-                  {selectedGalleryItem.caption}
-                </p>
+              {/* 다음 버튼 */}
+              {hasNext && (
+                <button
+                  className="absolute right-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
+                  onClick={(e) => { e.stopPropagation(); setSelectedGalleryItem(gallery[currentIdx + 1]); }}
+                >
+                  <ChevronRight size={24} />
+                </button>
               )}
+
+              {/* 콘텐츠 (이미지일 때 스와이프) */}
+              <motion.div
+                key={selectedGalleryItem.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                drag={selectedGalleryItem.type === 'image' ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -50 && hasNext) {
+                    setSelectedGalleryItem(gallery[currentIdx + 1]);
+                  } else if (info.offset.x > 50 && hasPrev) {
+                    setSelectedGalleryItem(gallery[currentIdx - 1]);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg mx-4"
+              >
+                {selectedGalleryItem.type === 'image' ? (
+                  <img
+                    src={selectedGalleryItem.url}
+                    alt={selectedGalleryItem.caption || '갤러리 이미지'}
+                    className="w-full rounded-xl select-none pointer-events-none"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    {getYoutubeId(selectedGalleryItem.url) ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${getYoutubeId(selectedGalleryItem.url)}?autoplay=1`}
+                        className="absolute inset-0 w-full h-full rounded-xl"
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        src={selectedGalleryItem.url}
+                        className="absolute inset-0 w-full h-full rounded-xl object-contain"
+                        controls
+                        autoPlay
+                      />
+                    )}
+                  </div>
+                )}
+                {selectedGalleryItem.caption && (
+                  <p className="text-white/80 text-sm text-center mt-3">
+                    {selectedGalleryItem.caption}
+                  </p>
+                )}
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* ========== 응원 메시지 상세 모달 ========== */}

@@ -156,6 +156,7 @@ const LANDING_SECTIONS = [
   { key: 'profile', label: '프로필/학력/경력', emoji: '👤' },
   { key: 'intro', label: '자기소개', emoji: '📝' },
   { key: 'pledges', label: '핵심공약', emoji: '📋' },
+  { key: 'gallery', label: '갤러리', emoji: '🖼️' },
   { key: 'feeds', label: '최근 소식', emoji: '📰' },
   { key: 'cheers', label: '응원 메시지', emoji: '💬' },
   { key: 'contact', label: '선거사무소', emoji: '📍' },
