@@ -13,6 +13,7 @@ import PledgesTab from './components/myinfo/PledgesTab';
 
 // 콘텐츠 탭 컴포넌트
 import FeedsTab from './components/content/FeedsTab';
+import GalleryTab from './components/content/GalleryTab';
 import CheersTab from './components/content/CheersTab';
 import QnaTab from './components/content/QnaTab';
 import SmsTab from './components/content/SmsTab';
@@ -41,6 +42,7 @@ function AppContent({ candidateId, onLogout }: { candidateId: string; onLogout: 
         {/* 콘텐츠 (소식, 응원, Q&A) */}
         <Route path="/content" element={<Navigate to="/content/feeds" replace />} />
         <Route path="/content/feeds" element={<FeedsTab candidateId={candidateId} />} />
+        <Route path="/content/gallery" element={<GalleryTab candidateId={candidateId} />} />
         <Route path="/content/cheers" element={<CheersTab candidateId={candidateId} />} />
         <Route path="/content/qna" element={<QnaTab candidateId={candidateId} />} />
         <Route path="/content/sms" element={<SmsTab candidateId={candidateId} />} />

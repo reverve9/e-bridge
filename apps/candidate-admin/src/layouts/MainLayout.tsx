@@ -42,6 +42,7 @@ const myInfoSubItems = [
 // 콘텐츠 서브메뉴 (공약 제외)
 const contentSubItems = [
   { path: '/content/feeds', label: '소식', icon: Newspaper },
+  { path: '/content/gallery', label: '갤러리', icon: Image },
   { path: '/content/cheers', label: '응원', icon: Heart },
   { path: '/content/qna', label: 'Q&A', icon: MessageCircle },
   { path: '/content/sms', label: '문자', icon: MessageSquareText },
