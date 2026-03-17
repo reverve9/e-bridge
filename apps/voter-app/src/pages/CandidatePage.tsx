@@ -297,6 +297,7 @@ export default function CandidatePage() {
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [galleryTab, setGalleryTab] = useState<'image' | 'video'>('image');
   const [showGalleryAll, setShowGalleryAll] = useState(false);
+  const [galleryFeaturedIndex, setGalleryFeaturedIndex] = useState(0);
 
   // 프로필 더보기 상태
   const [showAllProfile, setShowAllProfile] = useState(false);
@@ -351,6 +352,29 @@ export default function CandidatePage() {
     
     return () => clearInterval(interval);
   }, [candidate]);
+
+  // 갤러리 대표 이미지 랜덤 로테이션 (5초)
+  useEffect(() => {
+    const currentItems = galleryTab === 'image'
+      ? gallery.filter(g => g.type === 'image')
+      : gallery.filter(g => g.type === 'video');
+    if (currentItems.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setGalleryFeaturedIndex((prev) => {
+        let next;
+        do { next = Math.floor(Math.random() * currentItems.length); } while (next === prev);
+        return next;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [gallery, galleryTab]);
+
+  // 탭 전환 시 인덱스 리셋
+  useEffect(() => {
+    setGalleryFeaturedIndex(0);
+  }, [galleryTab]);
 
   // 응원 메시지 롤링 (4초마다, 6개 이상일 때만)
   useEffect(() => {
@@ -1102,9 +1126,11 @@ export default function CandidatePage() {
         const videos = gallery.filter(g => g.type === 'video');
         const currentItems = galleryTab === 'image' ? images : videos;
         const GRID_MAX = 4;
-        const featured = currentItems[0];
-        const gridItems = currentItems.slice(1, GRID_MAX + 1);
-        const remaining = currentItems.length - (GRID_MAX + 1);
+        const featIdx = galleryFeaturedIndex % currentItems.length;
+        const featured = currentItems[featIdx];
+        const otherItems = currentItems.filter((_, i) => i !== featIdx);
+        const gridItems = otherItems.slice(0, GRID_MAX);
+        const remaining = otherItems.length - GRID_MAX;
 
         return (
       <section className="px-4 mt-3">
@@ -1159,10 +1185,10 @@ export default function CandidatePage() {
               {galleryTab === 'image' ? '등록된 사진이 없습니다' : '등록된 영상이 없습니다'}
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {/* 첫번째 크게 */}
               <div
-                className="relative rounded-xl overflow-hidden cursor-pointer"
+                className="relative overflow-hidden cursor-pointer"
                 style={{ paddingBottom: galleryTab === 'video' ? '56.25%' : '66%' }}
                 onClick={() => setSelectedGalleryItem(featured)}
               >
@@ -1198,13 +1224,13 @@ export default function CandidatePage() {
 
               {/* 나머지 그리드 */}
               {gridItems.length > 0 && (
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-4 gap-1">
                   {gridItems.map((item, idx) => {
                     const isLast = idx === gridItems.length - 1 && remaining > 0;
                     return (
                       <div
                         key={item.id}
-                        className="relative rounded-lg overflow-hidden cursor-pointer"
+                        className="relative overflow-hidden cursor-pointer"
                         style={{ paddingBottom: '100%' }}
                         onClick={() => {
                           if (isLast) {
