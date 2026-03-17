@@ -781,7 +781,7 @@ export default function CandidatePage() {
               )}
 
               {/* QR코드 (우측 하단) - 항상 흰색 배경 */}
-              <div className="absolute bottom-10 right-6 z-10">
+              <div className="absolute bottom-5 right-5 z-10">
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`https://ebridge.kr/${candidate.party_code}/${candidate.candidate_code}`)}`}
                   alt="QR코드"
