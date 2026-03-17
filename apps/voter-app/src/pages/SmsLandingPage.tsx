@@ -311,6 +311,9 @@ export default function SmsLandingPage() {
   const [likedPledges, setLikedPledges] = useState<Set<string>>(new Set());
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   const [cheerStartIndex, setCheerStartIndex] = useState(0);
+  const [cheerName, setCheerName] = useState('');
+  const [cheerMessage, setCheerMessage] = useState('');
+  const [cheerSubmitting, setCheerSubmitting] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('likedPledges');
@@ -419,6 +422,36 @@ export default function SmsLandingPage() {
     const diffDay = Math.floor(diffHr / 24);
     if (diffDay < 7) return `${diffDay}일 전`;
     return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  const maskName = (name: string) => {
+    if (!name || name.trim() === '') return '익명';
+    const trimmed = name.trim();
+    if (trimmed.length === 1) return trimmed;
+    if (trimmed.length === 2) return trimmed[0] + '*';
+    const limited = trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
+    return limited[0] + '*'.repeat(limited.length - 2) + limited[limited.length - 1];
+  };
+
+  const handleCheerSubmit = async () => {
+    if (!cheerMessage.trim() || !candidate) return;
+    setCheerSubmitting(true);
+    const displayName = cheerName.trim() ? maskName(cheerName) : '익명';
+    await supabase.from('cheers').insert({
+      candidate_id: candidate.id,
+      name: displayName,
+      message: cheerMessage,
+    });
+    setCheerName('');
+    setCheerMessage('');
+    setCheerSubmitting(false);
+    const { data } = await supabase
+      .from('cheers')
+      .select('*')
+      .eq('candidate_id', candidate.id)
+      .eq('is_visible', true)
+      .order('created_at', { ascending: false });
+    if (data) setCheers(data);
   };
 
   // ========================================
@@ -934,7 +967,7 @@ export default function SmsLandingPage() {
                   >
                     {cheers.length === 0 ? (
                       <p className="text-center py-4" style={{ color: c.textMuted }}>
-                        아직 응원 메시지가 없습니다
+                        첫 번째 응원을 남겨주세요!
                       </p>
                     ) : (
                       <div
@@ -962,18 +995,70 @@ export default function SmsLandingPage() {
                               <span className="text-xs" style={{ color: c.textMuted }}>
                                 {formatTime(cheer.created_at)}
                               </span>
-                              <div
-                                className="flex items-center gap-0.5"
+                              <button
+                                onClick={async () => {
+                                  await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                                  const { data } = await supabase
+                                    .from('cheers')
+                                    .select('*')
+                                    .eq('candidate_id', candidate.id)
+                                    .eq('is_visible', true)
+                                    .order('created_at', { ascending: false });
+                                  if (data) setCheers(data);
+                                }}
+                                className="flex items-center gap-0.5 hover:text-red-500"
                                 style={{ color: c.textMuted }}
                               >
                                 <Heart size={12} />
                                 <span className="text-xs">{cheer.likes_count || 0}</span>
-                              </div>
+                              </button>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* 응원 메시지 작성 */}
+                  <div
+                    className="mt-3 pt-3"
+                    style={{ borderTop: `1px solid ${c.borderLight}` }}
+                  >
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={cheerName}
+                        onChange={(e) => setCheerName(e.target.value)}
+                        placeholder="이름 (선택)"
+                        className="w-24 px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{
+                          backgroundColor: c.cardBgAlt,
+                          color: c.textPrimary,
+                          border: `1px solid ${c.borderLight}`,
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={cheerMessage}
+                        onChange={(e) => setCheerMessage(e.target.value)}
+                        placeholder="응원 메시지를 남겨주세요"
+                        className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{
+                          backgroundColor: c.cardBgAlt,
+                          color: c.textPrimary,
+                          border: `1px solid ${c.borderLight}`,
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCheerSubmit(); }}
+                      />
+                      <button
+                        onClick={handleCheerSubmit}
+                        disabled={!cheerMessage.trim() || cheerSubmitting}
+                        className="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
+                        style={{ backgroundColor: c.primary, color: c.primaryText }}
+                      >
+                        <Send size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>

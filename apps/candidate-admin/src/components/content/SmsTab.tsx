@@ -298,12 +298,6 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
     setGeneratingLanding(true);
 
     try {
-      // 이전 랜딩페이지 삭제
-      await supabase
-        .from('sms_landings')
-        .delete()
-        .eq('candidate_id', candidateId);
-
       const { data, error } = await supabase
         .from('sms_landings')
         .insert({
