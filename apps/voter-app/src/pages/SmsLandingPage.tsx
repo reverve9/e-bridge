@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft,
   ChevronRight,
   MapPin,
   Phone,
   Mail,
-  Play,
-  X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import NotFoundPage from './NotFoundPage';
@@ -18,12 +15,12 @@ import {
   getPartyCode,
 } from '@e-bridge/ui';
 import { renderMarkdownBlock } from '@/lib/markdown';
-import { getYoutubeId, getVideoThumbnail } from '@/lib/markdown';
 import type { Profile, Pledge, Feed, Cheer, GalleryItem } from '@/lib/types';
 import ProfileSection from '@/components/sections/ProfileSection';
 import PledgesSection from '@/components/sections/PledgesSection';
 import FeedsSection from '@/components/sections/FeedsSection';
 import CheersSection from '@/components/sections/CheersSection';
+import GallerySection from '@/components/sections/GallerySection';
 
 // ========================================
 // 테마 헬퍼
@@ -95,7 +92,6 @@ export default function SmsLandingPage() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [cheers, setCheers] = useState<Cheer[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -354,49 +350,7 @@ export default function SmsLandingPage() {
             );
 
           case 'gallery':
-            if (gallery.length === 0) return null;
-            return (
-              <section key="gallery" className="px-4 mt-3">
-                <div
-                  className="rounded-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
-                    <span style={{ color: c.primary }}>갤러리</span>
-                  </h3>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {gallery.slice(0, 6).map((item) => (
-                      <div
-                        key={item.id}
-                        className="relative rounded-lg overflow-hidden cursor-pointer"
-                        style={{ paddingBottom: '100%' }}
-                        onClick={() => setSelectedGalleryItem(item)}
-                      >
-                        <img
-                          src={item.type === 'image' ? item.url : (getVideoThumbnail(item.url, item.thumbnail_url) || '')}
-                          alt={item.caption || ''}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        {item.type === 'video' && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <Play size={16} className="text-white" fill="white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {gallery.length > 6 && (
-                    <p className="text-center text-xs mt-2" style={{ color: c.textMuted }}>
-                      +{gallery.length - 6}장 더보기
-                    </p>
-                  )}
-                </div>
-              </section>
-            );
+            return <GallerySection key="gallery" theme={theme} gallery={gallery} />;
 
           case 'contact':
             if (!candidate.contact_address && !candidate.contact_phone && !candidate.contact_email) return null;
@@ -445,94 +399,6 @@ export default function SmsLandingPage() {
             return null;
         }
       })}
-
-      {/* ========== 갤러리 뷰어 모달 ========== */}
-      {selectedGalleryItem && (() => {
-        const currentIdx = gallery.findIndex(g => g.id === selectedGalleryItem.id);
-        const hasPrev = currentIdx > 0;
-        const hasNext = currentIdx < gallery.length - 1;
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
-            onClick={() => setSelectedGalleryItem(null)}
-          >
-            <button
-              className="absolute top-4 right-4 z-10 text-white/80 hover:text-white"
-              onClick={() => setSelectedGalleryItem(null)}
-            >
-              <X size={28} />
-            </button>
-            <div className="absolute top-4 left-4 z-10 text-white/70 text-sm font-medium">
-              {currentIdx + 1} / {gallery.length}
-            </div>
-            {hasPrev && (
-              <button
-                className="absolute left-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
-                onClick={(e) => { e.stopPropagation(); setSelectedGalleryItem(gallery[currentIdx - 1]); }}
-              >
-                <ChevronLeft size={24} />
-              </button>
-            )}
-            {hasNext && (
-              <button
-                className="absolute right-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
-                onClick={(e) => { e.stopPropagation(); setSelectedGalleryItem(gallery[currentIdx + 1]); }}
-              >
-                <ChevronRight size={24} />
-              </button>
-            )}
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg mx-4"
-              onTouchStart={(e) => {
-                const touch = e.touches[0];
-                (e.currentTarget as any)._touchStartX = touch.clientX;
-              }}
-              onTouchEnd={(e) => {
-                const startX = (e.currentTarget as any)._touchStartX;
-                if (startX == null) return;
-                const endX = e.changedTouches[0].clientX;
-                const diff = endX - startX;
-                if (diff < -50 && hasNext) setSelectedGalleryItem(gallery[currentIdx + 1]);
-                else if (diff > 50 && hasPrev) setSelectedGalleryItem(gallery[currentIdx - 1]);
-              }}
-            >
-              {selectedGalleryItem.type === 'image' ? (
-                <img
-                  src={selectedGalleryItem.url}
-                  alt={selectedGalleryItem.caption || '갤러리 이미지'}
-                  className="w-full rounded-xl select-none pointer-events-none"
-                  draggable={false}
-                />
-              ) : (
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  {getYoutubeId(selectedGalleryItem.url) ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${getYoutubeId(selectedGalleryItem.url)}?autoplay=1`}
-                      className="absolute inset-0 w-full h-full rounded-xl"
-                      allow="autoplay; encrypted-media"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video
-                      src={selectedGalleryItem.url}
-                      className="absolute inset-0 w-full h-full rounded-xl object-contain"
-                      controls
-                      autoPlay
-                    />
-                  )}
-                </div>
-              )}
-              {selectedGalleryItem.caption && (
-                <p className="text-white/80 text-sm text-center mt-3">
-                  {selectedGalleryItem.caption}
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ========== 전체 페이지 보기 CTA ========== */}
       <section className="px-4 mt-6 pb-6">
