@@ -312,6 +312,7 @@ export default function SmsLandingPage() {
   const [showAllPledges, setShowAllPledges] = useState(false);
   const [expandedPledgeId, setExpandedPledgeId] = useState<string | null>(null);
   const [likedPledges, setLikedPledges] = useState<Set<string>>(new Set());
+  const [likedCheers, setLikedCheers] = useState<Set<string>>(new Set());
   const [feedDisplayCount, setFeedDisplayCount] = useState(3);
   const [cheerStartIndex, setCheerStartIndex] = useState(0);
   const [cheerName, setCheerName] = useState('');
@@ -321,6 +322,8 @@ export default function SmsLandingPage() {
   useEffect(() => {
     const stored = localStorage.getItem('likedPledges');
     if (stored) setLikedPledges(new Set(JSON.parse(stored)));
+    const storedCheers = localStorage.getItem('likedCheers');
+    if (storedCheers) setLikedCheers(new Set(JSON.parse(storedCheers)));
   }, []);
 
   // 응원 메시지 롤링
@@ -1000,7 +1003,12 @@ export default function SmsLandingPage() {
                               </span>
                               <button
                                 onClick={async () => {
+                                  if (likedCheers.has(cheer.id)) return;
                                   await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
+                                  const newLiked = new Set(likedCheers);
+                                  newLiked.add(cheer.id);
+                                  setLikedCheers(newLiked);
+                                  localStorage.setItem('likedCheers', JSON.stringify([...newLiked]));
                                   const { data } = await supabase
                                     .from('cheers')
                                     .select('*')
@@ -1009,10 +1017,10 @@ export default function SmsLandingPage() {
                                     .order('created_at', { ascending: false });
                                   if (data) setCheers(data);
                                 }}
-                                className="flex items-center gap-0.5 hover:text-red-500"
-                                style={{ color: c.textMuted }}
+                                className="flex items-center gap-0.5"
+                                style={{ color: likedCheers.has(cheer.id) ? '#EF4444' : c.textMuted }}
                               >
-                                <Heart size={12} />
+                                <Heart size={12} className={likedCheers.has(cheer.id) ? 'fill-current' : ''} />
                                 <span className="text-xs">{cheer.likes_count || 0}</span>
                               </button>
                             </div>
