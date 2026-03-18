@@ -1033,7 +1033,7 @@ export default function SmsLandingPage() {
                         value={cheerName}
                         onChange={(e) => setCheerName(e.target.value)}
                         placeholder="이름 (선택)"
-                        className="w-24 px-3 py-2 rounded-lg text-sm outline-none"
+                        className="w-24 flex-shrink-0 px-3 py-2 rounded-lg text-sm outline-none"
                         style={{
                           backgroundColor: c.cardBgAlt,
                           color: c.textPrimary,
@@ -1045,7 +1045,7 @@ export default function SmsLandingPage() {
                         value={cheerMessage}
                         onChange={(e) => setCheerMessage(e.target.value)}
                         placeholder="응원 메시지를 남겨주세요"
-                        className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm outline-none"
                         style={{
                           backgroundColor: c.cardBgAlt,
                           color: c.textPrimary,
@@ -1056,7 +1056,7 @@ export default function SmsLandingPage() {
                       <button
                         onClick={handleCheerSubmit}
                         disabled={!cheerMessage.trim() || cheerSubmitting}
-                        className="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
+                        className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
                         style={{ backgroundColor: c.primary, color: c.primaryText }}
                       >
                         <Send size={16} />
