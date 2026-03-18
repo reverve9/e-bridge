@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Heart,
-  Send,
   MapPin,
   Phone,
   Mail,
-  ThumbsUp,
   Play,
-  Image,
   X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -19,72 +14,16 @@ import NotFoundPage from './NotFoundPage';
 import {
   Theme,
   ThemeMode,
-  ThemeColors,
   createTheme,
   getPartyCode,
 } from '@e-bridge/ui';
-
-// ========================================
-// 마크다운 렌더링
-// ========================================
-function renderInline(text: string) {
-  const parts: (string | JSX.Element)[] = [];
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|\[(.+?)\]\((.+?)\))/g;
-  let lastIndex = 0;
-  let match;
-  let key = 0;
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
-    if (match[2]) parts.push(<strong key={key++} className="font-bold">{match[2]}</strong>);
-    else if (match[3]) parts.push(<em key={key++} className="italic">{match[3]}</em>);
-    else if (match[4]) parts.push(<del key={key++} className="line-through">{match[4]}</del>);
-    else if (match[5] && match[6]) parts.push(
-      <a key={key++} href={match[6]} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{match[5]}</a>
-    );
-    lastIndex = regex.lastIndex;
-  }
-  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return parts;
-}
-
-function renderMarkdownBlock(text: string) {
-  const lines = text.split('\n');
-  const elements: JSX.Element[] = [];
-  let listItems: { type: 'ul' | 'ol'; text: string }[] = [];
-  let key = 0;
-
-  const flushList = () => {
-    if (listItems.length === 0) return;
-    const type = listItems[0].type;
-    const Tag = type === 'ol' ? 'ol' : 'ul';
-    elements.push(
-      <Tag key={key++} className={type === 'ol' ? 'list-decimal pl-5 my-1' : 'list-disc pl-5 my-1'}>
-        {listItems.map((item, i) => <li key={i} className="text-sm">{renderInline(item.text)}</li>)}
-      </Tag>
-    );
-    listItems = [];
-  };
-
-  for (const line of lines) {
-    const h3Match = line.match(/^###\s+(.+)/);
-    const h2Match = line.match(/^##\s+(.+)/);
-    const h1Match = line.match(/^#\s+(.+)/);
-    const quoteMatch = line.match(/^>\s+(.+)/);
-    const ulMatch = line.match(/^[-*]\s+(.+)/);
-    const olMatch = line.match(/^\d+\.\s+(.+)/);
-
-    if (h1Match) { flushList(); elements.push(<p key={key++} className="text-xl font-bold my-1">{renderInline(h1Match[1])}</p>); }
-    else if (h2Match) { flushList(); elements.push(<p key={key++} className="text-lg font-bold my-1">{renderInline(h2Match[1])}</p>); }
-    else if (h3Match) { flushList(); elements.push(<p key={key++} className="text-base font-bold my-1">{renderInline(h3Match[1])}</p>); }
-    else if (quoteMatch) { flushList(); elements.push(<div key={key++} className="border-l-3 border-blue-400 pl-3 my-1 text-gray-500 italic">{renderInline(quoteMatch[1])}</div>); }
-    else if (ulMatch) { listItems.push({ type: 'ul', text: ulMatch[1] }); }
-    else if (olMatch) { listItems.push({ type: 'ol', text: olMatch[1] }); }
-    else if (line.trim() === '') { flushList(); elements.push(<br key={key++} />); }
-    else { flushList(); elements.push(<span key={key++}>{renderInline(line)}<br /></span>); }
-  }
-  flushList();
-  return elements;
-}
+import { renderMarkdownBlock } from '@/lib/markdown';
+import { getYoutubeId, getVideoThumbnail } from '@/lib/markdown';
+import type { Profile, Pledge, Feed, Cheer, GalleryItem } from '@/lib/types';
+import ProfileSection from '@/components/sections/ProfileSection';
+import PledgesSection from '@/components/sections/PledgesSection';
+import FeedsSection from '@/components/sections/FeedsSection';
+import CheersSection from '@/components/sections/CheersSection';
 
 // ========================================
 // 테마 헬퍼
@@ -128,48 +67,6 @@ interface CandidateExt {
   theme_mode: string | null;
 }
 
-interface Profile {
-  education: any[];
-  career: any[];
-  introduction: string | null;
-}
-
-interface Pledge {
-  id: string;
-  emoji: string;
-  title: string;
-  description: string | null;
-  likes_count: number;
-}
-
-interface Feed {
-  id: string;
-  type: string;
-  title: string;
-  content: string | null;
-  summary: string | null;
-  source_url: string | null;
-  likes_count: number;
-  published_at: string;
-}
-
-interface Cheer {
-  id: string;
-  name: string;
-  message: string;
-  likes_count: number;
-  created_at: string;
-}
-
-interface GalleryItem {
-  id: string;
-  type: 'image' | 'video';
-  url: string;
-  thumbnail_url: string | null;
-  caption: string | null;
-  sort_order: number;
-}
-
 interface SmsLanding {
   id: number;
   candidate_id: string;
@@ -178,110 +75,6 @@ interface SmsLanding {
   closing: string | null;
   selected_pledge_ids: string[];
   sections: string[];
-}
-
-// ========================================
-// 유틸 함수
-// ========================================
-function getYoutubeId(url: string): string | null {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-
-function getVideoThumbnail(url: string, thumbnailUrl: string | null): string | null {
-  if (thumbnailUrl) return thumbnailUrl;
-  const ytId = getYoutubeId(url);
-  if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
-  return null;
-}
-
-// ========================================
-// FeedItem 서브 컴포넌트
-// ========================================
-function FeedItemComponent({
-  item,
-  theme,
-  formatTime,
-}: {
-  item: Feed;
-  theme: Theme;
-  formatTime: (dateStr: string) => string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const c = theme.colors;
-
-  return (
-    <div
-      className="last:border-0 pb-3 last:pb-0 cursor-pointer"
-      style={{ borderBottom: `1px solid ${c.borderLight}` }}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0"
-          style={{ backgroundColor: c.primaryLight, color: c.primary }}
-        >
-          {item.type === 'activity' ? '활동' : item.type === 'news' ? '뉴스' : '공지'}
-        </span>
-        <h4
-          className="font-semibold flex-1 truncate"
-          style={{ color: c.textPrimary }}
-        >
-          {item.title}
-        </h4>
-        <span
-          className="text-xs flex-shrink-0"
-          style={{ color: c.textMuted }}
-        >
-          {formatTime(item.published_at)}
-        </span>
-      </div>
-
-      {item.summary && (
-        <p
-          className={`text-sm font-medium italic mt-1 pl-3 ${expanded ? '' : 'truncate'}`}
-          style={{ color: c.primary }}
-        >
-          "{item.summary}"
-        </p>
-      )}
-
-      {expanded ? (
-        <>
-          {item.content && (
-            <p
-              className="text-sm mt-2 whitespace-pre-line leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
-              {item.content}
-            </p>
-          )}
-          {item.source_url && (
-            <a
-              href={item.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-block mt-2 text-xs font-medium"
-              style={{ color: c.primary }}
-            >
-              원문 보기 →
-            </a>
-          )}
-        </>
-      ) : (
-        !item.summary &&
-        item.content && (
-          <p
-            className="text-sm mt-1 truncate"
-            style={{ color: c.textMuted }}
-          >
-            {item.content}
-          </p>
-        )
-      )}
-    </div>
-  );
 }
 
 // ========================================
@@ -305,41 +98,10 @@ export default function SmsLandingPage() {
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // UI 상태
-  const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
-  const [showAllProfile, setShowAllProfile] = useState(false);
-  const [showAllIntro, setShowAllIntro] = useState(false);
-  const [showAllPledges, setShowAllPledges] = useState(false);
-  const [expandedPledgeId, setExpandedPledgeId] = useState<string | null>(null);
-  const [likedPledges, setLikedPledges] = useState<Set<string>>(new Set());
-  const [likedCheers, setLikedCheers] = useState<Set<string>>(new Set());
-  const [feedDisplayCount, setFeedDisplayCount] = useState(3);
-  const [cheerStartIndex, setCheerStartIndex] = useState(0);
-  const [cheerName, setCheerName] = useState('');
-  const [cheerMessage, setCheerMessage] = useState('');
-  const [cheerSubmitting, setCheerSubmitting] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('likedPledges');
-    if (stored) setLikedPledges(new Set(JSON.parse(stored)));
-    const storedCheers = localStorage.getItem('likedCheers');
-    if (storedCheers) setLikedCheers(new Set(JSON.parse(storedCheers)));
-  }, []);
-
-  // 응원 메시지 롤링
-  useEffect(() => {
-    if (cheers.length <= 5) return;
-    const interval = setInterval(() => {
-      setCheerStartIndex((prev) => (prev + 1 >= cheers.length ? 0 : prev + 1));
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [cheers.length]);
-
   useEffect(() => {
     const fetchData = async () => {
       if (!partyCode || !candidateCode || !landingId) return;
 
-      // 1. 후보자 조회
       const { data: candidateData } = await supabase
         .from('candidates')
         .select('*')
@@ -353,7 +115,6 @@ export default function SmsLandingPage() {
       }
       setCandidate(candidateData);
 
-      // 2. 랜딩 데이터 조회
       const { data: landingData } = await supabase
         .from('sms_landings')
         .select('*')
@@ -369,7 +130,6 @@ export default function SmsLandingPage() {
 
       const sections = new Set(landingData.sections || []);
 
-      // 3. 섹션에 따라 필요한 데이터만 로드
       const fetchProfile = async () => {
         if (!sections.has('profile') && !sections.has('intro')) return;
         const res = await supabase.from('profiles').select('*').eq('candidate_id', candidateData.id).maybeSingle();
@@ -398,7 +158,6 @@ export default function SmsLandingPage() {
 
       await Promise.all([fetchProfile(), fetchPledges(), fetchFeeds(), fetchCheers(), fetchGallery()]);
 
-      // 방문 기록
       const visitKey = `visited_landing_${landingData.id}`;
       const lastVisit = localStorage.getItem(visitKey);
       const now = Date.now();
@@ -412,53 +171,6 @@ export default function SmsLandingPage() {
 
     fetchData();
   }, [partyCode, candidateCode, landingId]);
-
-  // ========================================
-  // 헬퍼 함수
-  // ========================================
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return '방금';
-    if (diffMin < 60) return `${diffMin}분 전`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}시간 전`;
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return `${diffDay}일 전`;
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  };
-
-  const maskName = (name: string) => {
-    if (!name || name.trim() === '') return '익명';
-    const trimmed = name.trim();
-    if (trimmed.length === 1) return trimmed;
-    if (trimmed.length === 2) return trimmed[0] + '*';
-    const limited = trimmed.length > 5 ? trimmed.slice(0, 5) : trimmed;
-    return limited[0] + '*'.repeat(limited.length - 2) + limited[limited.length - 1];
-  };
-
-  const handleCheerSubmit = async () => {
-    if (!cheerMessage.trim() || !candidate) return;
-    setCheerSubmitting(true);
-    const displayName = cheerName.trim() ? maskName(cheerName) : '익명';
-    await supabase.from('cheers').insert({
-      candidate_id: candidate.id,
-      name: displayName,
-      message: cheerMessage,
-    });
-    setCheerName('');
-    setCheerMessage('');
-    setCheerSubmitting(false);
-    const { data } = await supabase
-      .from('cheers')
-      .select('*')
-      .eq('candidate_id', candidate.id)
-      .eq('is_visible', true)
-      .order('created_at', { ascending: false });
-    if (data) setCheers(data);
-  };
 
   // ========================================
   // 로딩 / 404
@@ -477,15 +189,9 @@ export default function SmsLandingPage() {
   const c = theme.colors;
   const sections = landing.sections || [];
 
-  // 선택된 공약만 필터
   const selectedPledgeIds = new Set(landing.selected_pledge_ids || []);
   const selectedPledges = pledges.filter((p) => selectedPledgeIds.has(p.id));
   const displayPledges = selectedPledges.length > 0 ? selectedPledges : pledges;
-
-  // 프로필 데이터
-  const educationList = profile?.education || [];
-  const careerList = profile?.career || [];
-  const totalProfileItems = educationList.length + careerList.length;
 
   const fullPageUrl = `/${candidate.party_code}/${candidate.candidate_code}`;
 
@@ -497,7 +203,6 @@ export default function SmsLandingPage() {
       {/* ========== 후보자 정보 ========== */}
       <section className="px-4 py-4" style={{ backgroundColor: c.cardBg }}>
         <div className="flex items-center gap-4">
-          {/* 프로필 이미지 */}
           {(candidate.thumbnail_url || candidate.photo_url) ? (
             <img
               src={candidate.thumbnail_url || candidate.photo_url!}
@@ -516,10 +221,7 @@ export default function SmsLandingPage() {
             </div>
           )}
           <div>
-            <p
-              className="text-sm"
-              style={{ color: c.textMuted }}
-            >
+            <p className="text-sm" style={{ color: c.textMuted }}>
               {candidate.election_name} {candidate.constituency}
             </p>
             <p
@@ -548,17 +250,12 @@ export default function SmsLandingPage() {
             border: theme.isDark ? `1px solid ${c.border}` : 'none',
           }}
         >
-          {/* 선거운동정보 */}
-          <div
-            className="rounded-lg px-3 py-2 mb-4"
-            style={{ backgroundColor: c.cardBgAlt }}
-          >
+          <div className="rounded-lg px-3 py-2 mb-4" style={{ backgroundColor: c.cardBgAlt }}>
             <span className="text-xs" style={{ color: c.textMuted }}>
               (선거운동정보)
             </span>
           </div>
 
-          {/* 공약 키워드 태그칩 */}
           {selectedPledges.length > 0 && (
             <div className="mb-4">
               <p className="text-sm font-bold mb-2" style={{ color: c.textPrimary }}>
@@ -578,32 +275,18 @@ export default function SmsLandingPage() {
             </div>
           )}
 
-          {/* 인사말 */}
           {landing.greeting && (
-            <p
-              className="text-sm mb-3 leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
+            <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
               {renderMarkdownBlock(landing.greeting)}
             </p>
           )}
-
-          {/* 본문 */}
           {landing.body && (
-            <p
-              className="text-sm mb-3 leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
+            <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
               {renderMarkdownBlock(landing.body)}
             </p>
           )}
-
-          {/* 마무리 */}
           {landing.closing && (
-            <p
-              className="text-sm leading-relaxed"
-              style={{ color: c.textSecondary }}
-            >
+            <p className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
               {renderMarkdownBlock(landing.closing)}
             </p>
           )}
@@ -614,465 +297,60 @@ export default function SmsLandingPage() {
       {sections.map((sectionKey) => {
         switch (sectionKey) {
           case 'profile':
-            if (totalProfileItems === 0) return null;
             return (
-              <section key="profile" className="px-4 mt-3">
-                <div className="flex">
-                  <button
-                    onClick={() => { setProfileTab('profile'); setShowAllProfile(false); setShowAllIntro(false); }}
-                    className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
-                    style={profileTab === 'profile'
-                      ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
-                      : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
-                    }
-                  >
-                    프로필
-                  </button>
-                  {sections.includes('intro') && profile?.introduction && (
-                    <button
-                      onClick={() => { setProfileTab('intro'); setShowAllProfile(false); setShowAllIntro(false); }}
-                      className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
-                      style={profileTab === 'intro'
-                        ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
-                        : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
-                      }
-                    >
-                      인사말
-                    </button>
-                  )}
-                </div>
-                <div
-                  className="rounded-b-2xl rounded-tr-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  {profileTab === 'profile' ? (
-                    <>
-                      {educationList.length > 0 && (
-                        <div className="mb-3">
-                          <h4 className="text-xs font-semibold mb-2" style={{ color: c.textMuted }}>학력</h4>
-                          <ul className="space-y-1">
-                            {(showAllProfile ? educationList : educationList.slice(0, 5)).map((edu: any, idx: number) => (
-                              <li key={`edu-${idx}`} className="text-sm" style={{ color: c.textSecondary }}>
-                                • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {careerList.length > 0 && (
-                        <div>
-                          <h4 className="text-xs font-semibold mb-2" style={{ color: c.textMuted }}>주요 경력</h4>
-                          <ul className="space-y-1.5">
-                            {(showAllProfile ? careerList : careerList.slice(0, 4)).map((career: any, idx: number) => (
-                              <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
-                                <span
-                                  className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
-                                  style={career.is_current ? {
-                                    backgroundColor: c.primaryLight,
-                                    color: c.primary,
-                                  } : {
-                                    backgroundColor: c.cardBgAlt,
-                                    color: c.textMuted,
-                                  }}
-                                >
-                                  {career.is_current ? '現' : '前'}
-                                </span>
-                                <span style={{ color: c.textSecondary }}>{career.title}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {(educationList.length > 5 || careerList.length > 4) && (
-                        <div className="flex justify-end mt-3">
-                          <button
-                            onClick={() => setShowAllProfile(!showAllProfile)}
-                            className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                            style={{ color: c.textMuted }}
-                          >
-                            {showAllProfile ? '접기' : '더보기'}
-                            <ChevronDown size={14} className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`} />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    profile?.introduction && (
-                      <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
-                        {(() => {
-                          const intro = profile.introduction;
-                          const truncatedIntro = intro.length > 200 ? intro.slice(0, 200) + '...' : intro;
-                          return (
-                            <>
-                              <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
-                                <span
-                                  className="float-left mr-1.5 flex items-center justify-center"
-                                  style={{
-                                    backgroundColor: c.primary,
-                                    color: c.primaryText,
-                                    fontSize: '1.5rem',
-                                    fontWeight: 800,
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '4px',
-                                    fontFamily: "'S-CoreDream', sans-serif",
-                                  }}
-                                >
-                                  {intro[0]}
-                                </span>
-                                {showAllIntro ? intro.slice(1) : truncatedIntro.slice(1)}
-                              </p>
-                              {showAllIntro && (
-                                <div className="flex items-center justify-center gap-2 mt-4 clear-both">
-                                  <span className="text-sm italic" style={{ color: c.textSecondary }}>
-                                    {candidate.name} 올림
-                                  </span>
-                                  {candidate.signature_url && (
-                                    <img src={candidate.signature_url} alt="싸인" className="h-8 object-contain" />
-                                  )}
-                                </div>
-                              )}
-                              {intro.length > 200 && (
-                                <div className="flex justify-end mt-3 clear-both">
-                                  <button
-                                    onClick={() => setShowAllIntro(!showAllIntro)}
-                                    className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                                    style={{ color: c.textMuted }}
-                                  >
-                                    {showAllIntro ? '접기' : '더보기'}
-                                    <ChevronDown size={14} className={`transition-transform ${showAllIntro ? 'rotate-180' : ''}`} />
-                                  </button>
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )
-                  )}
-                </div>
-              </section>
+              <ProfileSection
+                key="profile"
+                theme={theme}
+                profile={profile}
+                candidateName={candidate.name}
+                signatureUrl={candidate.signature_url}
+                showIntroTab={sections.includes('intro')}
+              />
             );
 
           case 'intro':
-            // intro는 profile 섹션과 탭으로 합쳐서 처리 (profile이 없을 때만 단독 표시)
             if (sections.includes('profile')) return null;
-            if (!profile?.introduction) return null;
             return (
-              <section key="intro" className="px-4 mt-3">
-                <div
-                  className="rounded-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
-                    <span style={{ color: c.primary }}>인사말</span>
-                  </h3>
-                  <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
-                    <p className="whitespace-pre-line">{profile.introduction}</p>
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <span className="text-sm italic" style={{ color: c.textSecondary }}>
-                        {candidate.name} 올림
-                      </span>
-                      {candidate.signature_url && (
-                        <img src={candidate.signature_url} alt="싸인" className="h-8 object-contain" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <ProfileSection
+                key="intro"
+                theme={theme}
+                profile={profile}
+                candidateName={candidate.name}
+                signatureUrl={candidate.signature_url}
+                showIntroTab={true}
+              />
             );
 
           case 'pledges':
-            if (displayPledges.length === 0) return null;
             return (
-              <section key="pledges" className="px-4 mt-3">
-                <div
-                  className="rounded-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
-                    <span style={{ color: c.primary }}>핵심공약</span>
-                  </h3>
-                  <div className="space-y-2">
-                    {(showAllPledges ? displayPledges : displayPledges.slice(0, 5)).map((pledge, idx) => {
-                      const isExpanded = expandedPledgeId === pledge.id;
-                      const isLiked = likedPledges.has(pledge.id);
-                      return (
-                        <div
-                          key={pledge.id}
-                          className="rounded-xl p-3 cursor-pointer transition-all"
-                          style={{
-                            backgroundColor: idx % 2 === 0
-                              ? (theme.isDark ? c.cardBgAlt : `${c.primary}08`)
-                              : (theme.isDark ? c.border : `${c.primary}04`),
-                          }}
-                          onClick={() => setExpandedPledgeId(isExpanded ? null : pledge.id)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                              style={{
-                                backgroundColor: c.primary,
-                                color: c.primaryText,
-                                fontSize: '11px',
-                                fontWeight: 600,
-                              }}
-                            >
-                              {idx + 1}
-                            </div>
-                            <h4
-                              className="flex-1 leading-snug"
-                              style={{ fontSize: '15px', fontWeight: 600, color: c.textPrimary }}
-                            >
-                              {pledge.title}
-                            </h4>
-                            <ChevronDown
-                              size={16}
-                              className={`transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
-                              style={{ color: c.textMuted }}
-                            />
-                          </div>
-                          {isExpanded && (
-                            <div className="mt-2 pl-7">
-                              {pledge.description && (
-                                <p
-                                  className="leading-relaxed mb-3"
-                                  style={{ fontSize: '13px', color: c.textSecondary }}
-                                >
-                                  {pledge.description}
-                                </p>
-                              )}
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (isLiked) return;
-                                  await supabase.rpc('increment_pledge_likes', { pledge_id: pledge.id });
-                                  const newLiked = new Set(likedPledges);
-                                  newLiked.add(pledge.id);
-                                  setLikedPledges(newLiked);
-                                  localStorage.setItem('likedPledges', JSON.stringify([...newLiked]));
-                                  const { data } = await supabase
-                                    .from('pledges')
-                                    .select('*')
-                                    .eq('candidate_id', candidate.id)
-                                    .order('order');
-                                  if (data) setPledges(data);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all"
-                                style={isLiked ? {
-                                  backgroundColor: theme.isDark ? '#7F1D1D' : '#FEF2F2',
-                                  color: '#EF4444',
-                                } : {
-                                  backgroundColor: c.cardBgAlt,
-                                  color: c.textMuted,
-                                }}
-                              >
-                                <ThumbsUp size={14} className={isLiked ? 'fill-current' : ''} />
-                                <span>{pledge.likes_count || 0}</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {displayPledges.length > 5 && (
-                    <div className="flex justify-end mt-3">
-                      <button
-                        onClick={() => setShowAllPledges(!showAllPledges)}
-                        className="text-xs flex items-center gap-0.5 hover:opacity-80"
-                        style={{ color: c.textMuted }}
-                      >
-                        {showAllPledges ? '접기' : `더보기 (${displayPledges.length - 5}개)`}
-                        <ChevronDown size={14} className={`transition-transform ${showAllPledges ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </section>
+              <PledgesSection
+                key="pledges"
+                theme={theme}
+                pledges={displayPledges}
+                candidateId={candidate.id}
+                onPledgesUpdate={setPledges}
+              />
             );
 
           case 'feeds':
             return (
-              <section key="feeds" className="px-4 mt-3">
-                <div
-                  className="rounded-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
-                    <span style={{ color: c.primary }}>최근 소식</span>
-                  </h3>
-                  <div className="space-y-3">
-                    {feeds.length === 0 ? (
-                      <p className="text-center py-4" style={{ color: c.textMuted }}>
-                        등록된 소식이 없습니다
-                      </p>
-                    ) : (
-                      <>
-                        {feeds.slice(0, feedDisplayCount).map((item) => (
-                          <FeedItemComponent
-                            key={item.id}
-                            item={item}
-                            theme={theme}
-                            formatTime={formatTime}
-                          />
-                        ))}
-                        {feeds.length > feedDisplayCount && (
-                          <button
-                            onClick={() => setFeedDisplayCount((prev) => prev + 5)}
-                            className="w-full py-3 text-sm rounded-xl hover:opacity-90"
-                            style={{ backgroundColor: c.cardBgAlt, color: c.textMuted }}
-                          >
-                            소식 더보기 ({feeds.length - feedDisplayCount}개)
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </section>
+              <FeedsSection
+                key="feeds"
+                theme={theme}
+                feeds={feeds}
+              />
             );
 
           case 'cheers':
             return (
-              <section key="cheers" className="px-4 mt-3">
-                <div
-                  className="rounded-2xl p-4 shadow-sm"
-                  style={{
-                    backgroundColor: c.cardBg,
-                    border: theme.isDark ? `1px solid ${c.border}` : 'none',
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold flex items-center gap-2">
-                      <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
-                      <span style={{ color: c.primary }}>응원 메시지</span>
-                    </h3>
-                    <span className="text-xs" style={{ color: c.textMuted }}>
-                      {cheers.length}개
-                    </span>
-                  </div>
-                  <div
-                    className="relative overflow-hidden"
-                    style={{ height: cheers.length === 0 ? 'auto' : `${Math.min(cheers.length, 5) * 36}px` }}
-                  >
-                    {cheers.length === 0 ? (
-                      <p className="text-center py-4" style={{ color: c.textMuted }}>
-                        첫 번째 응원을 남겨주세요!
-                      </p>
-                    ) : (
-                      <div
-                        className={cheerStartIndex === 0 ? '' : 'transition-transform duration-700 ease-in-out'}
-                        style={{ transform: `translateY(-${cheerStartIndex * 36}px)` }}
-                      >
-                        {[...cheers, ...cheers.slice(0, 5)].map((cheer, idx) => (
-                          <div
-                            key={`${cheer.id}-${idx}`}
-                            className="flex items-center gap-2 h-9"
-                          >
-                            <span
-                              className="font-semibold text-sm w-14 flex-shrink-0"
-                              style={{ color: c.textPrimary }}
-                            >
-                              {cheer.name}
-                            </span>
-                            <p
-                              className="text-sm flex-1 min-w-0 truncate"
-                              style={{ color: c.textSecondary }}
-                            >
-                              {cheer.message}
-                            </p>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="text-xs" style={{ color: c.textMuted }}>
-                                {formatTime(cheer.created_at)}
-                              </span>
-                              <button
-                                onClick={async () => {
-                                  if (likedCheers.has(cheer.id)) return;
-                                  await supabase.rpc('increment_cheer_likes', { cheer_id: cheer.id });
-                                  const newLiked = new Set(likedCheers);
-                                  newLiked.add(cheer.id);
-                                  setLikedCheers(newLiked);
-                                  localStorage.setItem('likedCheers', JSON.stringify([...newLiked]));
-                                  const { data } = await supabase
-                                    .from('cheers')
-                                    .select('*')
-                                    .eq('candidate_id', candidate.id)
-                                    .eq('is_visible', true)
-                                    .order('created_at', { ascending: false });
-                                  if (data) setCheers(data);
-                                }}
-                                className="flex items-center gap-0.5"
-                                style={{ color: likedCheers.has(cheer.id) ? '#EF4444' : c.textMuted }}
-                              >
-                                <Heart size={12} className={likedCheers.has(cheer.id) ? 'fill-current' : ''} />
-                                <span className="text-xs">{cheer.likes_count || 0}</span>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 응원 메시지 작성 */}
-                  <div
-                    className="mt-3 pt-3"
-                    style={{ borderTop: `1px solid ${c.borderLight}` }}
-                  >
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={cheerName}
-                        onChange={(e) => setCheerName(e.target.value)}
-                        placeholder="이름 (선택)"
-                        className="w-24 flex-shrink-0 px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{
-                          backgroundColor: c.cardBgAlt,
-                          color: c.textPrimary,
-                          border: `1px solid ${c.borderLight}`,
-                        }}
-                      />
-                      <input
-                        type="text"
-                        value={cheerMessage}
-                        onChange={(e) => setCheerMessage(e.target.value)}
-                        placeholder="응원 메시지를 남겨주세요"
-                        className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{
-                          backgroundColor: c.cardBgAlt,
-                          color: c.textPrimary,
-                          border: `1px solid ${c.borderLight}`,
-                        }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleCheerSubmit(); }}
-                      />
-                      <button
-                        onClick={handleCheerSubmit}
-                        disabled={!cheerMessage.trim() || cheerSubmitting}
-                        className="flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
-                        style={{ backgroundColor: c.primary, color: c.primaryText }}
-                      >
-                        <Send size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <CheersSection
+                key="cheers"
+                theme={theme}
+                cheers={cheers}
+                candidateId={candidate.id}
+                onCheersUpdate={setCheers}
+                variant="inline"
+              />
             );
 
           case 'gallery':
@@ -1168,7 +446,7 @@ export default function SmsLandingPage() {
         }
       })}
 
-      {/* ========== 갤러리 뷰어 모달 (스와이프 지원) ========== */}
+      {/* ========== 갤러리 뷰어 모달 ========== */}
       {selectedGalleryItem && (() => {
         const currentIdx = gallery.findIndex(g => g.id === selectedGalleryItem.id);
         const hasPrev = currentIdx > 0;
@@ -1185,13 +463,9 @@ export default function SmsLandingPage() {
             >
               <X size={28} />
             </button>
-
-            {/* 카운터 */}
             <div className="absolute top-4 left-4 z-10 text-white/70 text-sm font-medium">
               {currentIdx + 1} / {gallery.length}
             </div>
-
-            {/* 이전 버튼 */}
             {hasPrev && (
               <button
                 className="absolute left-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
@@ -1200,7 +474,6 @@ export default function SmsLandingPage() {
                 <ChevronLeft size={24} />
               </button>
             )}
-            {/* 다음 버튼 */}
             {hasNext && (
               <button
                 className="absolute right-2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white/80 hover:text-white"
@@ -1209,8 +482,6 @@ export default function SmsLandingPage() {
                 <ChevronRight size={24} />
               </button>
             )}
-
-            {/* 콘텐츠 (스와이프) */}
             <div
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-lg mx-4"

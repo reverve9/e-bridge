@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import type { Theme } from '@e-bridge/ui';
+import type { Profile } from '@/lib/types';
+
+interface ProfileSectionProps {
+  theme: Theme;
+  profile: Profile | null;
+  candidateName: string;
+  signatureUrl: string | null;
+  showIntroTab?: boolean;
+}
+
+export default function ProfileSection({ theme, profile, candidateName, signatureUrl, showIntroTab = true }: ProfileSectionProps) {
+  const c = theme.colors;
+  const [profileTab, setProfileTab] = useState<'profile' | 'intro'>('profile');
+  const [showAllProfile, setShowAllProfile] = useState(false);
+  const [showAllIntro, setShowAllIntro] = useState(false);
+
+  const educationList = profile?.education || [];
+  const careerList = profile?.career || [];
+  const totalProfileItems = educationList.length + careerList.length;
+
+  if (!profile?.introduction && totalProfileItems === 0) return null;
+
+  return (
+    <section className="px-4 mt-3">
+      <div className="flex">
+        <button
+          onClick={() => { setProfileTab('profile'); setShowAllProfile(false); setShowAllIntro(false); }}
+          className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
+          style={profileTab === 'profile'
+            ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
+            : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
+          }
+        >
+          프로필
+        </button>
+        {showIntroTab && (
+          <button
+            onClick={() => { setProfileTab('intro'); setShowAllProfile(false); setShowAllIntro(false); }}
+            className="px-5 py-1.5 font-bold rounded-t-lg transition-colors"
+            style={profileTab === 'intro'
+              ? { backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }
+              : { backgroundColor: c.cardBgAlt, color: c.textMuted, letterSpacing: '0.05em' }
+            }
+          >
+            인사말
+          </button>
+        )}
+      </div>
+
+      <div
+        className="rounded-b-2xl rounded-tr-2xl p-4 shadow-sm"
+        style={{
+          backgroundColor: c.cardBg,
+          border: theme.isDark ? `1px solid ${c.border}` : 'none'
+        }}
+      >
+        {profileTab === 'profile' ? (
+          <>
+            {educationList.length > 0 && (
+              <div className="mb-3">
+                <h4 className="text-xs font-semibold mb-2" style={{ color: c.textMuted }}>학력</h4>
+                <ul className="space-y-1">
+                  {(showAllProfile ? educationList : educationList.slice(0, 5)).map((edu: any, idx: number) => (
+                    <li key={`edu-${idx}`} className="text-sm" style={{ color: c.textSecondary }}>
+                      • {edu.school} {edu.major && `(${edu.major})`} {edu.note && `- ${edu.note}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {careerList.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold mb-2" style={{ color: c.textMuted }}>주요 경력</h4>
+                <ul className="space-y-1.5">
+                  {(showAllProfile ? careerList : careerList.slice(0, 4)).map((career: any, idx: number) => (
+                    <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
+                      <span
+                        className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
+                        style={career.is_current ? {
+                          backgroundColor: c.primaryLight,
+                          color: c.primary,
+                        } : {
+                          backgroundColor: c.cardBgAlt,
+                          color: c.textMuted,
+                        }}
+                      >
+                        {career.is_current ? '現' : '前'}
+                      </span>
+                      <span style={{ color: c.textSecondary }}>{career.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(educationList.length > 5 || careerList.length > 4) && (
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={() => setShowAllProfile(!showAllProfile)}
+                  className="text-xs flex items-center gap-0.5 hover:opacity-80"
+                  style={{ color: c.textMuted }}
+                >
+                  {showAllProfile ? '접기' : '더보기'}
+                  <ChevronDown size={14} className={`transition-transform ${showAllProfile ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          profile?.introduction && (
+            <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
+              {(() => {
+                const intro = profile.introduction;
+                const truncatedIntro = intro.length > 200 ? intro.slice(0, 200) + '...' : intro;
+                return (
+                  <>
+                    <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
+                      <span
+                        className="float-left mr-1.5 flex items-center justify-center"
+                        style={{
+                          backgroundColor: c.primary,
+                          color: c.primaryText,
+                          fontSize: '1.5rem',
+                          fontWeight: 800,
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '4px',
+                          fontFamily: "'S-CoreDream', sans-serif"
+                        }}
+                      >
+                        {intro[0]}
+                      </span>
+                      {showAllIntro ? intro.slice(1) : truncatedIntro.slice(1)}
+                    </p>
+                    {showAllIntro && (
+                      <div className="flex items-center justify-center gap-2 mt-4 clear-both">
+                        <span className="text-sm italic" style={{ color: c.textSecondary }}>
+                          {candidateName} 올림
+                        </span>
+                        {signatureUrl && (
+                          <img src={signatureUrl} alt="싸인" className="h-8 object-contain" />
+                        )}
+                      </div>
+                    )}
+                    {intro.length > 200 && (
+                      <div className="flex justify-end mt-3 clear-both">
+                        <button
+                          onClick={() => setShowAllIntro(!showAllIntro)}
+                          className="text-xs flex items-center gap-0.5 hover:opacity-80"
+                          style={{ color: c.textMuted }}
+                        >
+                          {showAllIntro ? '접기' : '더보기'}
+                          <ChevronDown size={14} className={`transition-transform ${showAllIntro ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )
+        )}
+      </div>
+    </section>
+  );
+}
