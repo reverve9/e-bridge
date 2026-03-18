@@ -873,7 +873,7 @@ export default function CandidatePage() {
                       학력
                     </h4>
                     <ul className="space-y-1">
-                      {(showAllProfile ? educationList : educationList.slice(0, 2)).map((edu: any, idx: number) => (
+                      {(showAllProfile ? educationList : educationList.slice(0, 5)).map((edu: any, idx: number) => (
                         <li 
                           key={`edu-${idx}`} 
                           className="text-sm"
@@ -896,7 +896,7 @@ export default function CandidatePage() {
                       주요 경력
                     </h4>
                     <ul className="space-y-1.5">
-                      {(showAllProfile ? careerList : careerList.slice(0, 2)).map((career: any, idx: number) => (
+                      {(showAllProfile ? careerList : careerList.slice(0, 4)).map((career: any, idx: number) => (
                         <li key={`career-${idx}`} className="flex items-start gap-2 text-sm">
                           <span 
                             className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
@@ -918,7 +918,7 @@ export default function CandidatePage() {
                 )}
                 
                 {/* 프로필 더보기/접기 */}
-                {(educationList.length > 2 || careerList.length > 2) && (
+                {(educationList.length > 5 || careerList.length > 4) && (
                   <div className="flex justify-end mt-3">
                     <button
                       onClick={() => setShowAllProfile(!showAllProfile)}
