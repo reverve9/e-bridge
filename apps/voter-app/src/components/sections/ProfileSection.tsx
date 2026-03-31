@@ -36,25 +36,10 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
       >
         <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
           <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
-            <span
-              className="float-left mr-1.5 flex items-center justify-center"
-              style={{
-                backgroundColor: c.primary,
-                color: c.primaryText,
-                fontSize: '1.5rem',
-                fontWeight: 800,
-                width: '40px',
-                height: '40px',
-                borderRadius: '4px',
-                fontFamily: "'S-CoreDream', sans-serif"
-              }}
-            >
-              {intro[0]}
-            </span>
-            {showAllIntro ? intro.slice(1) : truncatedIntro.slice(1)}
+            {showAllIntro ? intro : truncatedIntro}
           </p>
           {showAllIntro && (
-            <div className="flex items-center justify-center gap-2 mt-4 clear-both">
+            <div className="flex items-center justify-center gap-2 mt-4">
               <span className="text-sm italic" style={{ color: c.textSecondary }}>
                 {candidateName} 올림
               </span>
@@ -64,7 +49,7 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
             </div>
           )}
           {intro.length > 200 && (
-            <div className="flex justify-end mt-3 clear-both">
+            <div className="flex justify-end mt-3">
               <button
                 onClick={() => setShowAllIntro(!showAllIntro)}
                 className="text-xs flex items-center gap-0.5 hover:opacity-80"
