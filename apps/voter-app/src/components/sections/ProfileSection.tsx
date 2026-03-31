@@ -17,7 +17,9 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
   if (!profile?.introduction) return null;
 
   const intro = profile.introduction;
-  const truncatedIntro = intro.length > 200 ? intro.slice(0, 200) + '...' : intro;
+  const introLines = intro.split('\n');
+  const needsTruncation = introLines.length > 6;
+  const truncatedIntro = needsTruncation ? introLines.slice(0, 6).join('\n') + '...' : intro;
 
   return (
     <section className="px-4 mt-3">
@@ -46,7 +48,7 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
               )}
             </div>
           )}
-          {intro.length > 200 && (
+          {needsTruncation && (
             <div className="flex justify-end mt-3">
               <button
                 onClick={() => setShowAllIntro(!showAllIntro)}
