@@ -22,18 +22,16 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
   return (
     <section className="px-4 mt-3">
       <div
-        className="px-5 py-1.5 font-bold rounded-t-lg inline-block"
-        style={{ backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }}
-      >
-        인사말
-      </div>
-      <div
-        className="rounded-b-2xl rounded-tr-2xl p-4 shadow-sm"
+        className="rounded-2xl p-4 shadow-sm"
         style={{
           backgroundColor: c.cardBg,
           border: theme.isDark ? `1px solid ${c.border}` : 'none'
         }}
       >
+        <h3 className="font-bold mb-3 flex items-center gap-2">
+          <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
+          <span style={{ color: c.primary }}>인사말</span>
+        </h3>
         <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
           <p className="whitespace-pre-line">
             {showAllIntro ? intro : truncatedIntro}
@@ -84,18 +82,16 @@ export default function ProfileSection({ theme, profile }: ProfileSectionProps) 
   return (
     <section className="px-4 mt-3">
       <div
-        className="px-5 py-1.5 font-bold rounded-t-lg inline-block"
-        style={{ backgroundColor: c.cardBg, color: c.primary, letterSpacing: '0.05em' }}
-      >
-        프로필
-      </div>
-      <div
-        className="rounded-b-2xl rounded-tr-2xl p-4 shadow-sm"
+        className="rounded-2xl p-4 shadow-sm"
         style={{
           backgroundColor: c.cardBg,
           border: theme.isDark ? `1px solid ${c.border}` : 'none'
         }}
       >
+        <h3 className="font-bold mb-3 flex items-center gap-2">
+          <span className="w-1 h-5 rounded-full" style={{ backgroundColor: c.primary }} />
+          <span style={{ color: c.primary }}>프로필</span>
+        </h3>
         {educationList.length > 0 && (
           <div className="mb-3">
             <h4 className="text-xs font-semibold mb-2" style={{ color: c.textMuted }}>학력</h4>
