@@ -25,7 +25,7 @@ import {
 } from '@e-bridge/ui';
 import { getYoutubeId, getVideoThumbnail, formatTime, maskName } from '@/lib/markdown';
 import type { Profile, Pledge, Feed, Cheer, GalleryItem } from '@/lib/types';
-import ProfileSection from '@/components/sections/ProfileSection';
+import ProfileSection, { IntroSection } from '@/components/sections/ProfileSection';
 import PledgesSection from '@/components/sections/PledgesSection';
 import FeedsSection from '@/components/sections/FeedsSection';
 import CheersSection from '@/components/sections/CheersSection';
@@ -514,12 +514,18 @@ export default function CandidatePage() {
         </section>
       )}
 
-      {/* ========== 프로필/인사말 탭 카드 ========== */}
-      <ProfileSection
+      {/* ========== 인사말 ========== */}
+      <IntroSection
         theme={theme}
         profile={profile}
         candidateName={candidate.name}
         signatureUrl={candidate.signature_url}
+      />
+
+      {/* ========== 프로필 ========== */}
+      <ProfileSection
+        theme={theme}
+        profile={profile}
       />
 
       {/* ========== 핵심공약 섹션 ========== */}

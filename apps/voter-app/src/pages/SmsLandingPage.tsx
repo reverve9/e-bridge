@@ -16,7 +16,7 @@ import {
 } from '@e-bridge/ui';
 import { renderMarkdownBlock } from '@/lib/markdown';
 import type { Profile, Pledge, Feed, Cheer, GalleryItem } from '@/lib/types';
-import ProfileSection from '@/components/sections/ProfileSection';
+import ProfileSection, { IntroSection } from '@/components/sections/ProfileSection';
 import PledgesSection from '@/components/sections/PledgesSection';
 import FeedsSection from '@/components/sections/FeedsSection';
 import CheersSection from '@/components/sections/CheersSection';
@@ -292,28 +292,23 @@ export default function SmsLandingPage() {
       {/* ========== 동적 섹션 렌더링 ========== */}
       {sections.map((sectionKey) => {
         switch (sectionKey) {
+          case 'intro':
+            return (
+              <IntroSection
+                key="intro"
+                theme={theme}
+                profile={profile}
+                candidateName={candidate.name}
+                signatureUrl={candidate.signature_url}
+              />
+            );
+
           case 'profile':
             return (
               <ProfileSection
                 key="profile"
                 theme={theme}
                 profile={profile}
-                candidateName={candidate.name}
-                signatureUrl={candidate.signature_url}
-                showIntroTab={sections.includes('intro')}
-              />
-            );
-
-          case 'intro':
-            if (sections.includes('profile')) return null;
-            return (
-              <ProfileSection
-                key="intro"
-                theme={theme}
-                profile={profile}
-                candidateName={candidate.name}
-                signatureUrl={candidate.signature_url}
-                showIntroTab={true}
               />
             );
 
