@@ -35,7 +35,7 @@ export function IntroSection({ theme, profile, candidateName, signatureUrl }: In
         }}
       >
         <div className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
-          <p className={showAllIntro ? 'whitespace-pre-line' : ''}>
+          <p className="whitespace-pre-line">
             {showAllIntro ? intro : truncatedIntro}
           </p>
           {showAllIntro && (
