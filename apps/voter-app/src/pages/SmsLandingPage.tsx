@@ -76,7 +76,7 @@ interface SmsLanding {
   slide_images: string[] | null;
 }
 
-// 문자 내용 카드 (300자 더보기)
+// 문자 내용 카드 (15줄 더보기)
 function SmsContentCard({ landing, selectedPledges, theme }: {
   landing: SmsLanding;
   selectedPledges: Pledge[];
@@ -86,23 +86,24 @@ function SmsContentCard({ landing, selectedPledges, theme }: {
   const c = theme.colors;
 
   const fullText = [landing.greeting, landing.body, landing.closing].filter(Boolean).join('\n');
-  const needsTruncate = fullText.length > 300;
-  const showFull = expanded || !needsTruncate;
+  const totalLines = fullText.split('\n').length;
+  const needsTruncate = totalLines > 15;
 
-  // 300자 기준으로 어떤 필드까지 보여줄지 계산
+  // 15줄 기준으로 어떤 필드까지 보여줄지 계산
   const truncatedParts = (() => {
-    if (showFull) return { greeting: landing.greeting, body: landing.body, closing: landing.closing };
-    let remaining = 300;
+    if (expanded || !needsTruncate) return { greeting: landing.greeting, body: landing.body, closing: landing.closing };
+    let remaining = 15;
     const result: { greeting: string | null; body: string | null; closing: string | null } = { greeting: null, body: null, closing: null };
     for (const key of ['greeting', 'body', 'closing'] as const) {
       const val = landing[key];
       if (!val) continue;
       if (remaining <= 0) break;
-      if (val.length <= remaining) {
+      const lines = val.split('\n');
+      if (lines.length <= remaining) {
         result[key] = val;
-        remaining -= val.length;
+        remaining -= lines.length;
       } else {
-        result[key] = val.slice(0, remaining) + '...';
+        result[key] = lines.slice(0, remaining).join('\n');
         remaining = 0;
       }
     }
