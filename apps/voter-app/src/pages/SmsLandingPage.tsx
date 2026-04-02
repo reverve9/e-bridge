@@ -419,10 +419,6 @@ export default function SmsLandingPage() {
           case 'gallery':
             return <GallerySection key="gallery" theme={theme} gallery={gallery} />;
 
-          case 'sms_images':
-            if (!landing.slide_images || landing.slide_images.length === 0) return null;
-            return <SmsImageSlider key="sms_images" images={landing.slide_images} theme={theme} />;
-
           case 'contact':
             if (!candidate.contact_address && !candidate.contact_phone && !candidate.contact_email) return null;
             return (
@@ -470,6 +466,11 @@ export default function SmsLandingPage() {
             return null;
         }
       })}
+
+      {/* ========== 이미지 슬라이드 (문자 전용) ========== */}
+      {landing.slide_images && landing.slide_images.length > 0 && (
+        <SmsImageSlider images={landing.slide_images} theme={theme} />
+      )}
 
       {/* ========== 전체 페이지 보기 CTA ========== */}
       <section className="px-4 mt-6 pb-6">

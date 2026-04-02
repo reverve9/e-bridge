@@ -160,7 +160,6 @@ const LANDING_SECTIONS = [
   { key: 'feeds', label: '최근 소식', emoji: '📰' },
   { key: 'cheers', label: '응원 메시지', emoji: '💬' },
   { key: 'contact', label: '선거사무소', emoji: '📍' },
-  { key: 'sms_images', label: '이미지 슬라이드', emoji: '🖼️' },
 ] as const;
 
 interface SmsLanding {
@@ -191,6 +190,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [landingCopied, setLandingCopied] = useState(false);
 
   // 이미지 슬라이드 상태
+  const [showSlideImages, setShowSlideImages] = useState(false);
   const [slideImages, setSlideImages] = useState<string[]>([]);
   const [uploadingSlide, setUploadingSlide] = useState(false);
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
@@ -224,7 +224,10 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
         if (latest.closing) setClosing(latest.closing);
         if (latest.selected_pledge_ids) setSelectedPledgeIds(new Set(latest.selected_pledge_ids));
         if (latest.sections) setSelectedSections(latest.sections);
-        if (latest.slide_images) setSlideImages(latest.slide_images);
+        if (latest.slide_images && latest.slide_images.length > 0) {
+          setSlideImages(latest.slide_images);
+          setShowSlideImages(true);
+        }
       }
       setLoading(false);
     };
@@ -339,6 +342,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const handleReset = () => {
     setSelectedPledgeIds(new Set());
     setBody('');
+    setShowSlideImages(false);
     setSlideImages([]);
     setPreviewSlideIndex(0);
     if (candidate) {
@@ -361,7 +365,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           closing: closing.trim() || null,
           selected_pledge_ids: [...selectedPledgeIds],
           sections: selectedSections,
-          slide_images: slideImages,
+          slide_images: showSlideImages ? slideImages : [],
         })
         .select('id')
         .single();
@@ -500,55 +504,65 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             </div>
           </div>
 
-          {/* 이미지 슬라이드 (최대 6장) */}
-          {selectedSections.includes('sms_images') && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700">이미지 슬라이드</label>
-                <span className="text-xs text-gray-400">{slideImages.length} / 6</span>
-              </div>
-              <p className="text-xs text-gray-400 mb-3">문자 랜딩페이지에만 표시되는 이미지 슬라이드입니다</p>
-
-              <input
-                ref={slideFileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleSlideUpload}
-                className="hidden"
-              />
-
-              <div className="grid grid-cols-3 gap-2">
-                {slideImages.map((url, i) => (
-                  <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 group">
-                    <img src={url} alt={`슬라이드 ${i + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => handleRemoveSlide(i)}
-                      className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={14} />
-                    </button>
-                    <span className="absolute bottom-1 left-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">{i + 1}</span>
-                  </div>
-                ))}
-                {slideImages.length < 6 && (
-                  <button
-                    onClick={() => slideFileInputRef.current?.click()}
-                    disabled={uploadingSlide}
-                    className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 transition-colors flex flex-col items-center justify-center gap-1 text-gray-400"
-                  >
-                    {uploadingSlide ? (
-                      <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Plus size={20} />
-                        <span className="text-xs">추가</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
+          {/* 이미지 슬라이드 (최대 6장) — 문자 전용 */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-semibold text-gray-700">이미지 슬라이드</label>
+              <button
+                type="button"
+                onClick={() => setShowSlideImages(!showSlideImages)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${showSlideImages ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${showSlideImages ? 'translate-x-5' : ''}`} />
+              </button>
             </div>
-          )}
+            <p className="text-xs text-gray-400 mb-3">문자 랜딩페이지에만 표시되는 이미지 슬라이드입니다</p>
+
+            {showSlideImages && (
+              <>
+                <input
+                  ref={slideFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSlideUpload}
+                  className="hidden"
+                />
+                <div className="flex items-center justify-end mb-2">
+                  <span className="text-xs text-gray-400">{slideImages.length} / 6</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {slideImages.map((url, i) => (
+                    <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 group">
+                      <img src={url} alt={`슬라이드 ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleRemoveSlide(i)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                      <span className="absolute bottom-1 left-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">{i + 1}</span>
+                    </div>
+                  ))}
+                  {slideImages.length < 6 && (
+                    <button
+                      onClick={() => slideFileInputRef.current?.click()}
+                      disabled={uploadingSlide}
+                      className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 transition-colors flex flex-col items-center justify-center gap-1 text-gray-400"
+                    >
+                      {uploadingSlide ? (
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Plus size={20} />
+                          <span className="text-xs">추가</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* 랜딩페이지 생성 버튼 */}
           <button
@@ -683,46 +697,46 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                 </div>
               </div>
 
+              {/* 이미지 슬라이드 미리보기 */}
+              {showSlideImages && slideImages.length > 0 && (
+                <div className="px-4 mt-2">
+                  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div className="relative aspect-[4/3]">
+                      <img
+                        src={slideImages[previewSlideIndex]}
+                        alt={`슬라이드 ${previewSlideIndex + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {slideImages.length > 1 && (
+                        <>
+                          <button
+                            onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slideImages.length) % slideImages.length)}
+                            className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+                          <button
+                            onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slideImages.length)}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                            {slideImages.map((_, i) => (
+                              <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === previewSlideIndex ? 'bg-white' : 'bg-white/50'}`} />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 선택된 섹션 표시 */}
               {selectedSections.length > 0 && (
                 <div className="px-4 mt-2 space-y-2">
                   {selectedSections.map((key) => {
-                    // 이미지 슬라이드는 실제 미리보기로 표시
-                    if (key === 'sms_images' && slideImages.length > 0) {
-                      return (
-                        <div key="sms_images" className="bg-white rounded-xl shadow-sm overflow-hidden">
-                          <div className="relative aspect-[4/3]">
-                            <img
-                              src={slideImages[previewSlideIndex]}
-                              alt={`슬라이드 ${previewSlideIndex + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            {slideImages.length > 1 && (
-                              <>
-                                <button
-                                  onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slideImages.length) % slideImages.length)}
-                                  className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
-                                >
-                                  <ChevronLeft size={14} />
-                                </button>
-                                <button
-                                  onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slideImages.length)}
-                                  className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
-                                >
-                                  <ChevronRight size={14} />
-                                </button>
-                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                  {slideImages.map((_, i) => (
-                                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === previewSlideIndex ? 'bg-white' : 'bg-white/50'}`} />
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    }
-
                     const section = LANDING_SECTIONS.find(s => s.key === key);
                     if (!section) return null;
                     return (
