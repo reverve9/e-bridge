@@ -176,6 +176,15 @@ function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const c = theme.colors;
 
+  // 5초 자동 슬라이드
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
   if (images.length === 0) return null;
 
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
