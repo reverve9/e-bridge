@@ -678,7 +678,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                       result[key] = val;
                       remaining -= lines.length;
                     } else {
-                      result[key] = lines.slice(0, remaining).join('\n');
+                      result[key] = lines.slice(0, remaining).join('\n') + '...';
                       remaining = 0;
                     }
                   }
