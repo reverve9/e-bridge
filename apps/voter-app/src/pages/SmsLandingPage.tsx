@@ -76,6 +76,99 @@ interface SmsLanding {
   slide_images: string[] | null;
 }
 
+// 문자 내용 카드 (300자 더보기)
+function SmsContentCard({ landing, selectedPledges, theme }: {
+  landing: SmsLanding;
+  selectedPledges: Pledge[];
+  theme: Theme;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const c = theme.colors;
+
+  const fullText = [landing.greeting, landing.body, landing.closing].filter(Boolean).join('\n');
+  const needsTruncate = fullText.length > 300;
+  const showFull = expanded || !needsTruncate;
+
+  // 300자 기준으로 어떤 필드까지 보여줄지 계산
+  const truncatedParts = (() => {
+    if (showFull) return { greeting: landing.greeting, body: landing.body, closing: landing.closing };
+    let remaining = 300;
+    const result: { greeting: string | null; body: string | null; closing: string | null } = { greeting: null, body: null, closing: null };
+    for (const key of ['greeting', 'body', 'closing'] as const) {
+      const val = landing[key];
+      if (!val) continue;
+      if (remaining <= 0) break;
+      if (val.length <= remaining) {
+        result[key] = val;
+        remaining -= val.length;
+      } else {
+        result[key] = val.slice(0, remaining) + '...';
+        remaining = 0;
+      }
+    }
+    return result;
+  })();
+
+  return (
+    <section className="px-4 mt-3">
+      <div
+        className="rounded-2xl p-5 shadow-sm"
+        style={{
+          backgroundColor: c.cardBg,
+          border: theme.isDark ? `1px solid ${c.border}` : 'none',
+        }}
+      >
+        <div className="rounded-lg px-3 py-2 mb-4" style={{ backgroundColor: c.cardBgAlt }}>
+          <span className="text-xs" style={{ color: c.textMuted }}>(선거운동정보)</span>
+        </div>
+
+        {selectedPledges.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-bold mb-2" style={{ color: c.textPrimary }}>★ 후보자의 약속</p>
+            <div className="flex flex-wrap gap-1.5">
+              {selectedPledges.map((p) => (
+                <span
+                  key={p.id}
+                  className="inline-block text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{ backgroundColor: c.primaryLight, color: c.primary }}
+                >
+                  {p.emoji} {p.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {truncatedParts.greeting && (
+          <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
+            {renderMarkdownBlock(truncatedParts.greeting)}
+          </p>
+        )}
+        {truncatedParts.body && (
+          <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
+            {renderMarkdownBlock(truncatedParts.body)}
+          </p>
+        )}
+        {truncatedParts.closing && (
+          <p className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
+            {renderMarkdownBlock(truncatedParts.closing)}
+          </p>
+        )}
+
+        {needsTruncate && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="mt-3 text-sm font-medium"
+            style={{ color: c.primary }}
+          >
+            {expanded ? '접기' : '더보기'}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // 이미지 슬라이드 컴포넌트
 function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
   const [current, setCurrent] = useState(0);
@@ -103,14 +196,14 @@ function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
         }}
       >
         <div
-          className="relative aspect-[4/3]"
+          className="relative"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
           <img
             src={images[current]}
             alt={`슬라이드 ${current + 1}`}
-            className="w-full h-full object-cover"
+            className="w-full h-auto"
           />
           {images.length > 1 && (
             <>
@@ -310,56 +403,7 @@ export default function SmsLandingPage() {
       </section>
 
       {/* ========== 문자 내용 카드 ========== */}
-      <section className="px-4 mt-3">
-        <div
-          className="rounded-2xl p-5 shadow-sm"
-          style={{
-            backgroundColor: c.cardBg,
-            border: theme.isDark ? `1px solid ${c.border}` : 'none',
-          }}
-        >
-          <div className="rounded-lg px-3 py-2 mb-4" style={{ backgroundColor: c.cardBgAlt }}>
-            <span className="text-xs" style={{ color: c.textMuted }}>
-              (선거운동정보)
-            </span>
-          </div>
-
-          {selectedPledges.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-bold mb-2" style={{ color: c.textPrimary }}>
-                ★ 후보자의 약속
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedPledges.map((p) => (
-                  <span
-                    key={p.id}
-                    className="inline-block text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ backgroundColor: c.primaryLight, color: c.primary }}
-                  >
-                    {p.emoji} {p.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {landing.greeting && (
-            <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
-              {renderMarkdownBlock(landing.greeting)}
-            </p>
-          )}
-          {landing.body && (
-            <p className="text-sm mb-3 leading-relaxed" style={{ color: c.textSecondary }}>
-              {renderMarkdownBlock(landing.body)}
-            </p>
-          )}
-          {landing.closing && (
-            <p className="text-sm leading-relaxed" style={{ color: c.textSecondary }}>
-              {renderMarkdownBlock(landing.closing)}
-            </p>
-          )}
-        </div>
-      </section>
+      <SmsContentCard landing={landing} selectedPledges={selectedPledges} theme={theme} />
 
       {/* ========== 동적 섹션 렌더링 ========== */}
       {sections.map((sectionKey) => {
