@@ -194,6 +194,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [slideImages, setSlideImages] = useState<string[]>([]);
   const [uploadingSlide, setUploadingSlide] = useState(false);
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
   const slideFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -659,53 +660,83 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               </div>
 
               {/* 문자 내용 */}
-              <div className="px-4 mt-2">
-                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                  {/* 선거운동정보 */}
-                  <div className="bg-gray-100 rounded-lg px-3 py-2 mb-4">
-                    <span className="text-xs text-gray-500">(선거운동정보)</span>
-                  </div>
+              {(() => {
+                const fullText = [greeting.trim(), body.trim(), closing.trim()].filter(Boolean).join('\n');
+                const totalLines = fullText.split('\n').length;
+                const needsTruncate = totalLines > 15;
+                const showFull = previewExpanded || !needsTruncate;
 
-                  {/* 공약 키워드 */}
-                  {selectedPledges.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-bold text-gray-800 mb-2">★ 후보자의 약속</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedPledges.map((p) => (
-                          <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                            {p.emoji} {p.title}
-                          </span>
-                        ))}
+                const truncated = (() => {
+                  if (showFull) return { greeting: greeting.trim(), body: body.trim(), closing: closing.trim() };
+                  let remaining = 15;
+                  const result = { greeting: '', body: '', closing: '' };
+                  for (const [key, val] of [['greeting', greeting.trim()], ['body', body.trim()], ['closing', closing.trim()]] as const) {
+                    if (!val) continue;
+                    if (remaining <= 0) break;
+                    const lines = val.split('\n');
+                    if (lines.length <= remaining) {
+                      result[key] = val;
+                      remaining -= lines.length;
+                    } else {
+                      result[key] = lines.slice(0, remaining).join('\n');
+                      remaining = 0;
+                    }
+                  }
+                  return result;
+                })();
+
+                return (
+                  <div className="px-4 mt-2">
+                    <div className="bg-white rounded-2xl p-4 shadow-sm">
+                      <div className="bg-gray-100 rounded-lg px-3 py-2 mb-4">
+                        <span className="text-xs text-gray-500">(선거운동정보)</span>
                       </div>
+
+                      {selectedPledges.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm font-bold text-gray-800 mb-2">★ 후보자의 약속</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedPledges.map((p) => (
+                              <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                {p.emoji} {p.title}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {truncated.greeting && (
+                        <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.greeting)}</p>
+                      )}
+                      {truncated.body && (
+                        <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.body)}</p>
+                      )}
+                      {truncated.closing && (
+                        <p className="text-sm text-gray-700 leading-relaxed">{renderMarkdownBlock(truncated.closing)}</p>
+                      )}
+
+                      {needsTruncate && (
+                        <button
+                          onClick={() => setPreviewExpanded(!previewExpanded)}
+                          className="mt-3 text-sm font-medium text-blue-600"
+                        >
+                          {previewExpanded ? '접기' : '더보기'}
+                        </button>
+                      )}
                     </div>
-                  )}
-
-                  {/* 인사말 */}
-                  {greeting.trim() && (
-                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(greeting.trim())}</p>
-                  )}
-
-                  {/* 본문 */}
-                  {body.trim() && (
-                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(body.trim())}</p>
-                  )}
-
-                  {/* 마무리 */}
-                  {closing.trim() && (
-                    <p className="text-sm text-gray-700 leading-relaxed">{renderMarkdownBlock(closing.trim())}</p>
-                  )}
-                </div>
-              </div>
+                  </div>
+                );
+              })()}
 
               {/* 이미지 슬라이드 미리보기 */}
               {showSlideImages && slideImages.length > 0 && (
                 <div className="px-4 mt-2">
                   <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div className="relative aspect-[4/3]">
+                    <div className="relative">
                       <img
                         src={slideImages[previewSlideIndex]}
                         alt={`슬라이드 ${previewSlideIndex + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto"
                       />
                       {slideImages.length > 1 && (
                         <>
