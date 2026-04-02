@@ -403,12 +403,20 @@ export default function SmsLandingPage() {
         </div>
       </section>
 
-      {/* ========== 문자 내용 카드 ========== */}
-      <SmsContentCard landing={landing} selectedPledges={selectedPledges} theme={theme} />
-
-      {/* ========== 동적 섹션 렌더링 ========== */}
+      {/* ========== 콘텐츠 순서대로 렌더링 ========== */}
+      {/* 기존 데이터 호환: sms_content가 없으면 맨 앞에 문자 내용 표시 */}
+      {!sections.includes('sms_content') && (
+        <SmsContentCard landing={landing} selectedPledges={selectedPledges} theme={theme} />
+      )}
       {sections.map((sectionKey) => {
         switch (sectionKey) {
+          case 'sms_content':
+            return <SmsContentCard key="sms_content" landing={landing} selectedPledges={selectedPledges} theme={theme} />;
+
+          case 'sms_images':
+            if (!landing.slide_images || landing.slide_images.length === 0) return null;
+            return <SmsImageSlider key="sms_images" images={landing.slide_images} theme={theme} />;
+
           case 'intro':
             return (
               <IntroSection
@@ -511,11 +519,6 @@ export default function SmsLandingPage() {
             return null;
         }
       })}
-
-      {/* ========== 이미지 슬라이드 (문자 전용) ========== */}
-      {landing.slide_images && landing.slide_images.length > 0 && (
-        <SmsImageSlider images={landing.slide_images} theme={theme} />
-      )}
 
       {/* ========== 전체 페이지 보기 CTA ========== */}
       <section className="px-4 mt-6 pb-6">

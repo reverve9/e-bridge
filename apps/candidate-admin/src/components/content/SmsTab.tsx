@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle, Plus, X, Image as ImageIcon, ChevronLeft } from 'lucide-react';
+import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle, Plus, X, Image as ImageIcon, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-react';
 
 // 인라인 마크다운 렌더링: **볼드**, *이탤릭*, ~~취소선~~, [링크](url)
 function renderInline(text: string) {
@@ -183,19 +183,21 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  // 랜딩페이지 관련 상태 (배열로 관리하여 클릭 순서 보존)
-  const [selectedSections, setSelectedSections] = useState<string[]>(['profile', 'pledges']);
+  // 콘텐츠 순서 통합 관리 (sms_content, sms_images, 랜딩 섹션 모두 포함)
+  const [contentOrder, setContentOrder] = useState<string[]>(['sms_content', 'profile', 'pledges']);
   const [generatingLanding, setGeneratingLanding] = useState(false);
   const [landingUrl, setLandingUrl] = useState<string | null>(null);
   const [landingCopied, setLandingCopied] = useState(false);
 
   // 이미지 슬라이드 상태
-  const [showSlideImages, setShowSlideImages] = useState(false);
   const [slideImages, setSlideImages] = useState<string[]>([]);
   const [uploadingSlide, setUploadingSlide] = useState(false);
   const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const slideFileInputRef = useRef<HTMLInputElement>(null);
+
+  // 파생 상태
+  const showSlideImages = contentOrder.includes('sms_images');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -224,10 +226,25 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
         if (latest.body) setBody(latest.body);
         if (latest.closing) setClosing(latest.closing);
         if (latest.selected_pledge_ids) setSelectedPledgeIds(new Set(latest.selected_pledge_ids));
-        if (latest.sections) setSelectedSections(latest.sections);
+        if (latest.sections) {
+          // 기존 데이터 호환: sms_content가 없으면 맨 앞에 추가
+          const sections = latest.sections as string[];
+          if (!sections.includes('sms_content')) {
+            setContentOrder(['sms_content', ...sections]);
+          } else {
+            setContentOrder(sections);
+          }
+        }
         if (latest.slide_images && latest.slide_images.length > 0) {
           setSlideImages(latest.slide_images);
-          setShowSlideImages(true);
+          // sms_images가 contentOrder에 없으면 sms_content 뒤에 추가
+          setContentOrder((prev) =>
+            prev.includes('sms_images') ? prev : [
+              ...prev.slice(0, prev.indexOf('sms_content') + 1),
+              'sms_images',
+              ...prev.slice(prev.indexOf('sms_content') + 1),
+            ]
+          );
         }
       }
       setLoading(false);
@@ -246,9 +263,34 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   };
 
   const toggleSection = (key: string) => {
-    setSelectedSections((prev) =>
+    setContentOrder((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+  };
+
+  const toggleSlideImages = () => {
+    setContentOrder((prev) =>
+      prev.includes('sms_images')
+        ? prev.filter((k) => k !== 'sms_images')
+        : [...prev.slice(0, prev.indexOf('sms_content') + 1), 'sms_images', ...prev.slice(prev.indexOf('sms_content') + 1)]
+    );
+  };
+
+  const moveBlock = (index: number, direction: 'up' | 'down') => {
+    setContentOrder((prev) => {
+      const next = [...prev];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= next.length) return prev;
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+      return next;
+    });
+  };
+
+  // 콘텐츠 블록 라벨 맵
+  const BLOCK_LABELS: Record<string, { label: string; emoji: string }> = {
+    sms_content: { label: '문자 내용', emoji: '💬' },
+    sms_images: { label: '이미지 슬라이드', emoji: '🖼️' },
+    ...Object.fromEntries(LANDING_SECTIONS.map((s) => [s.key, { label: s.label, emoji: s.emoji }])),
   };
 
   const handleSlideUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,7 +385,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const handleReset = () => {
     setSelectedPledgeIds(new Set());
     setBody('');
-    setShowSlideImages(false);
+    setContentOrder(['sms_content', 'profile', 'pledges']);
     setSlideImages([]);
     setPreviewSlideIndex(0);
     if (candidate) {
@@ -365,7 +407,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           body: body.trim() || null,
           closing: closing.trim() || null,
           selected_pledge_ids: [...selectedPledgeIds],
-          sections: selectedSections,
+          sections: contentOrder,
           slide_images: showSlideImages ? slideImages : [],
         })
         .select('id')
@@ -487,7 +529,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             <p className="text-xs text-gray-400 mb-3">문자 링크를 클릭했을 때 추가로 보여줄 섹션을 선택하세요</p>
             <div className="flex flex-wrap gap-2">
               {LANDING_SECTIONS.map((section) => {
-                const selected = selectedSections.includes(section.key);
+                const selected = contentOrder.includes(section.key);
                 return (
                   <button
                     key={section.key}
@@ -511,7 +553,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               <label className="text-sm font-semibold text-gray-700">이미지 슬라이드</label>
               <button
                 type="button"
-                onClick={() => setShowSlideImages(!showSlideImages)}
+                onClick={toggleSlideImages}
                 className={`relative w-10 h-5 rounded-full transition-colors ${showSlideImages ? 'bg-blue-600' : 'bg-gray-300'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${showSlideImages ? 'translate-x-5' : ''}`} />
@@ -563,6 +605,41 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                 </div>
               </>
             )}
+          </div>
+
+          {/* ===== 콘텐츠 순서 관리 ===== */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">콘텐츠 순서</label>
+            <p className="text-xs text-gray-400 mb-3">랜딩페이지에 표시될 순서를 변경할 수 있습니다</p>
+            <div className="space-y-1.5">
+              {contentOrder.map((key, index) => {
+                const block = BLOCK_LABELS[key];
+                if (!block) return null;
+                return (
+                  <div key={key} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl">
+                    <span className="text-sm w-5 text-center text-gray-400 font-medium">{index + 1}</span>
+                    <span className="text-sm">{block.emoji}</span>
+                    <span className="text-sm font-medium text-gray-700 flex-1">{block.label}</span>
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => moveBlock(index, 'up')}
+                        disabled={index === 0}
+                        className="p-1 hover:bg-gray-200 rounded disabled:opacity-20 transition-colors"
+                      >
+                        <ChevronUp size={16} className="text-gray-500" />
+                      </button>
+                      <button
+                        onClick={() => moveBlock(index, 'down')}
+                        disabled={index === contentOrder.length - 1}
+                        className="p-1 hover:bg-gray-200 rounded disabled:opacity-20 transition-colors"
+                      >
+                        <ChevronDown size={16} className="text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* 랜딩페이지 생성 버튼 */}
@@ -659,127 +736,91 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
                 </div>
               </div>
 
-              {/* 문자 내용 */}
-              {(() => {
-                const fullText = [greeting.trim(), body.trim(), closing.trim()].filter(Boolean).join('\n');
-                const totalLines = fullText.split('\n').length;
-                const needsTruncate = totalLines > 15;
-                const showFull = previewExpanded || !needsTruncate;
-
-                const truncated = (() => {
-                  if (showFull) return { greeting: greeting.trim(), body: body.trim(), closing: closing.trim() };
-                  let remaining = 15;
-                  const result = { greeting: '', body: '', closing: '' };
-                  for (const [key, val] of [['greeting', greeting.trim()], ['body', body.trim()], ['closing', closing.trim()]] as const) {
-                    if (!val) continue;
-                    if (remaining <= 0) break;
-                    const lines = val.split('\n');
-                    if (lines.length <= remaining) {
-                      result[key] = val;
-                      remaining -= lines.length;
-                    } else {
-                      result[key] = lines.slice(0, remaining).join('\n') + '...';
-                      remaining = 0;
+              {/* 콘텐츠 순서대로 렌더링 */}
+              {contentOrder.map((key) => {
+                if (key === 'sms_content') {
+                  const fullText = [greeting.trim(), body.trim(), closing.trim()].filter(Boolean).join('\n');
+                  const totalLines = fullText.split('\n').length;
+                  const needsTruncate = totalLines > 15;
+                  const showFull = previewExpanded || !needsTruncate;
+                  const truncated = (() => {
+                    if (showFull) return { greeting: greeting.trim(), body: body.trim(), closing: closing.trim() };
+                    let remaining = 15;
+                    const result = { greeting: '', body: '', closing: '' };
+                    for (const [k, val] of [['greeting', greeting.trim()], ['body', body.trim()], ['closing', closing.trim()]] as const) {
+                      if (!val) continue;
+                      if (remaining <= 0) break;
+                      const lines = val.split('\n');
+                      if (lines.length <= remaining) { result[k] = val; remaining -= lines.length; }
+                      else { result[k] = lines.slice(0, remaining).join('\n') + '...'; remaining = 0; }
                     }
-                  }
-                  return result;
-                })();
-
-                return (
-                  <div className="px-4 mt-2">
-                    <div className="bg-white rounded-2xl p-4 shadow-sm">
-                      <div className="bg-gray-100 rounded-lg px-3 py-2 mb-4">
-                        <span className="text-xs text-gray-500">(선거운동정보)</span>
-                      </div>
-
-                      {selectedPledges.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-sm font-bold text-gray-800 mb-2">★ 후보자의 약속</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {selectedPledges.map((p) => (
-                              <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                {p.emoji} {p.title}
-                              </span>
-                            ))}
-                          </div>
+                    return result;
+                  })();
+                  return (
+                    <div key="sms_content" className="px-4 mt-2">
+                      <div className="bg-white rounded-2xl p-4 shadow-sm">
+                        <div className="bg-gray-100 rounded-lg px-3 py-2 mb-4">
+                          <span className="text-xs text-gray-500">(선거운동정보)</span>
                         </div>
-                      )}
+                        {selectedPledges.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-sm font-bold text-gray-800 mb-2">★ 후보자의 약속</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedPledges.map((p) => (
+                                <span key={p.id} className="inline-block bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                  {p.emoji} {p.title}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {truncated.greeting && <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.greeting)}</p>}
+                        {truncated.body && <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.body)}</p>}
+                        {truncated.closing && <p className="text-sm text-gray-700 leading-relaxed">{renderMarkdownBlock(truncated.closing)}</p>}
+                        {needsTruncate && (
+                          <button onClick={() => setPreviewExpanded(!previewExpanded)} className="mt-3 text-sm font-medium text-blue-600">
+                            {previewExpanded ? '접기' : '더보기'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
 
-                      {truncated.greeting && (
-                        <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.greeting)}</p>
-                      )}
-                      {truncated.body && (
-                        <p className="text-sm text-gray-700 mb-3 leading-relaxed">{renderMarkdownBlock(truncated.body)}</p>
-                      )}
-                      {truncated.closing && (
-                        <p className="text-sm text-gray-700 leading-relaxed">{renderMarkdownBlock(truncated.closing)}</p>
-                      )}
+                if (key === 'sms_images' && slideImages.length > 0) {
+                  return (
+                    <div key="sms_images" className="px-4 mt-2">
+                      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div className="relative">
+                          <img src={slideImages[previewSlideIndex]} alt={`슬라이드 ${previewSlideIndex + 1}`} className="w-full h-auto" />
+                          {slideImages.length > 1 && (
+                            <>
+                              <button onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slideImages.length) % slideImages.length)} className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"><ChevronLeft size={14} /></button>
+                              <button onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slideImages.length)} className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"><ChevronRight size={14} /></button>
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                {slideImages.map((_, i) => (<div key={i} className={`w-1.5 h-1.5 rounded-full ${i === previewSlideIndex ? 'bg-white' : 'bg-white/50'}`} />))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
-                      {needsTruncate && (
-                        <button
-                          onClick={() => setPreviewExpanded(!previewExpanded)}
-                          className="mt-3 text-sm font-medium text-blue-600"
-                        >
-                          {previewExpanded ? '접기' : '더보기'}
-                        </button>
-                      )}
+                // 랜딩 섹션 placeholder
+                const section = LANDING_SECTIONS.find(s => s.key === key);
+                if (!section) return null;
+                return (
+                  <div key={key} className="px-4 mt-2">
+                    <div className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
+                      <span className="text-sm">{section.emoji}</span>
+                      <span className="text-sm font-medium text-gray-600">{section.label}</span>
+                      <span className="ml-auto text-xs text-gray-300">섹션 영역</span>
                     </div>
                   </div>
                 );
-              })()}
-
-              {/* 이미지 슬라이드 미리보기 */}
-              {showSlideImages && slideImages.length > 0 && (
-                <div className="px-4 mt-2">
-                  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div className="relative">
-                      <img
-                        src={slideImages[previewSlideIndex]}
-                        alt={`슬라이드 ${previewSlideIndex + 1}`}
-                        className="w-full h-auto"
-                      />
-                      {slideImages.length > 1 && (
-                        <>
-                          <button
-                            onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slideImages.length) % slideImages.length)}
-                            className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
-                          >
-                            <ChevronLeft size={14} />
-                          </button>
-                          <button
-                            onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slideImages.length)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
-                          >
-                            <ChevronRight size={14} />
-                          </button>
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                            {slideImages.map((_, i) => (
-                              <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === previewSlideIndex ? 'bg-white' : 'bg-white/50'}`} />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 선택된 섹션 표시 */}
-              {selectedSections.length > 0 && (
-                <div className="px-4 mt-2 space-y-2">
-                  {selectedSections.map((key) => {
-                    const section = LANDING_SECTIONS.find(s => s.key === key);
-                    if (!section) return null;
-                    return (
-                      <div key={section.key} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
-                        <span className="text-sm">{section.emoji}</span>
-                        <span className="text-sm font-medium text-gray-600">{section.label}</span>
-                        <span className="ml-auto text-xs text-gray-300">섹션 영역</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              })}
 
               {/* 전체 페이지 보기 */}
               <div className="px-4 mt-4 pb-4">
