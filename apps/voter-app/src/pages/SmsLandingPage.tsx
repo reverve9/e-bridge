@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
+  ChevronLeft,
   MapPin,
   Phone,
   Mail,
@@ -72,6 +73,77 @@ interface SmsLanding {
   closing: string | null;
   selected_pledge_ids: string[];
   sections: string[];
+  slide_images: string[] | null;
+}
+
+// 이미지 슬라이드 컴포넌트
+function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
+  const [current, setCurrent] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const c = theme.colors;
+
+  if (images.length === 0) return null;
+
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const diff = e.changedTouches[0].clientX - touchStart;
+    if (diff < -50) setCurrent((prev) => Math.min(prev + 1, images.length - 1));
+    if (diff > 50) setCurrent((prev) => Math.max(prev - 1, 0));
+    setTouchStart(null);
+  };
+
+  return (
+    <section className="px-4 mt-3">
+      <div
+        className="rounded-2xl overflow-hidden shadow-sm"
+        style={{
+          backgroundColor: c.cardBg,
+          border: theme.isDark ? `1px solid ${c.border}` : 'none',
+        }}
+      >
+        <div
+          className="relative aspect-[4/3]"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <img
+            src={images[current]}
+            alt={`슬라이드 ${current + 1}`}
+            className="w-full h-full object-cover"
+          />
+          {images.length > 1 && (
+            <>
+              {current > 0 && (
+                <button
+                  onClick={() => setCurrent((prev) => prev - 1)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+              )}
+              {current < images.length - 1 && (
+                <button
+                  onClick={() => setCurrent((prev) => prev + 1)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 text-white rounded-full flex items-center justify-center"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              )}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {images.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 h-2 rounded-full transition-colors ${i === current ? 'bg-white' : 'bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 // ========================================
@@ -346,6 +418,10 @@ export default function SmsLandingPage() {
 
           case 'gallery':
             return <GallerySection key="gallery" theme={theme} gallery={gallery} />;
+
+          case 'sms_images':
+            if (!landing.slide_images || landing.slide_images.length === 0) return null;
+            return <SmsImageSlider key="sms_images" images={landing.slide_images} theme={theme} />;
 
           case 'contact':
             if (!candidate.contact_address && !candidate.contact_phone && !candidate.contact_email) return null;

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle } from 'lucide-react';
+import { Copy, RotateCcw, Check, MessageSquare, ExternalLink, Link2, Loader2, ChevronRight, HelpCircle, Plus, X, Image as ImageIcon, ChevronLeft } from 'lucide-react';
 
 // 인라인 마크다운 렌더링: **볼드**, *이탤릭*, ~~취소선~~, [링크](url)
 function renderInline(text: string) {
@@ -160,6 +160,7 @@ const LANDING_SECTIONS = [
   { key: 'feeds', label: '최근 소식', emoji: '📰' },
   { key: 'cheers', label: '응원 메시지', emoji: '💬' },
   { key: 'contact', label: '선거사무소', emoji: '📍' },
+  { key: 'sms_images', label: '이미지 슬라이드', emoji: '🖼️' },
 ] as const;
 
 interface SmsLanding {
@@ -169,6 +170,7 @@ interface SmsLanding {
   closing: string | null;
   selected_pledge_ids: string[];
   sections: string[];
+  slide_images: string[];
   created_at: string;
 }
 
@@ -187,6 +189,12 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const [generatingLanding, setGeneratingLanding] = useState(false);
   const [landingUrl, setLandingUrl] = useState<string | null>(null);
   const [landingCopied, setLandingCopied] = useState(false);
+
+  // 이미지 슬라이드 상태
+  const [slideImages, setSlideImages] = useState<string[]>([]);
+  const [uploadingSlide, setUploadingSlide] = useState(false);
+  const [previewSlideIndex, setPreviewSlideIndex] = useState(0);
+  const slideFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -216,6 +224,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
         if (latest.closing) setClosing(latest.closing);
         if (latest.selected_pledge_ids) setSelectedPledgeIds(new Set(latest.selected_pledge_ids));
         if (latest.sections) setSelectedSections(latest.sections);
+        if (latest.slide_images) setSlideImages(latest.slide_images);
       }
       setLoading(false);
     };
@@ -236,6 +245,49 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
     setSelectedSections((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+  };
+
+  const handleSlideUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (slideImages.length >= 6) {
+      alert('이미지는 최대 6장까지 추가할 수 있습니다.');
+      return;
+    }
+
+    setUploadingSlide(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `sms-slide-${candidateId}-${Date.now()}.${fileExt}`;
+    const filePath = `sms-slides/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('candidates')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      alert('이미지 업로드에 실패했습니다.');
+      setUploadingSlide(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('candidates')
+      .getPublicUrl(filePath);
+
+    setSlideImages((prev) => [...prev, `${publicUrl}?t=${Date.now()}`]);
+    setUploadingSlide(false);
+    if (e.target) e.target.value = '';
+  };
+
+  const handleRemoveSlide = async (index: number) => {
+    const url = slideImages[index];
+    const cleanUrl = url.split('?')[0];
+    const pathMatch = cleanUrl.match(/sms-slides\/sms-slide-[^/]+$/);
+    if (pathMatch) {
+      await supabase.storage.from('candidates').remove([pathMatch[0]]);
+    }
+    setSlideImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviewSlideIndex(0);
   };
 
   const selectedPledges = pledges.filter((p) => selectedPledgeIds.has(p.id));
@@ -287,6 +339,8 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
   const handleReset = () => {
     setSelectedPledgeIds(new Set());
     setBody('');
+    setSlideImages([]);
+    setPreviewSlideIndex(0);
     if (candidate) {
       setGreeting(`안녕하세요, ${candidate.region}${candidate.district ? ' ' + candidate.district : ''} 주민 여러분!\n${candidate.party} ${candidate.name}입니다.`);
       setClosing(`${candidate.name}에게 소중한 한 표를 부탁드립니다.\n감사합니다.`);
@@ -307,6 +361,7 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           closing: closing.trim() || null,
           selected_pledge_ids: [...selectedPledgeIds],
           sections: selectedSections,
+          slide_images: slideImages,
         })
         .select('id')
         .single();
@@ -445,6 +500,56 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
             </div>
           </div>
 
+          {/* 이미지 슬라이드 (최대 6장) */}
+          {selectedSections.includes('sms_images') && (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-gray-700">이미지 슬라이드</label>
+                <span className="text-xs text-gray-400">{slideImages.length} / 6</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">문자 랜딩페이지에만 표시되는 이미지 슬라이드입니다</p>
+
+              <input
+                ref={slideFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleSlideUpload}
+                className="hidden"
+              />
+
+              <div className="grid grid-cols-3 gap-2">
+                {slideImages.map((url, i) => (
+                  <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 group">
+                    <img src={url} alt={`슬라이드 ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => handleRemoveSlide(i)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={14} />
+                    </button>
+                    <span className="absolute bottom-1 left-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">{i + 1}</span>
+                  </div>
+                ))}
+                {slideImages.length < 6 && (
+                  <button
+                    onClick={() => slideFileInputRef.current?.click()}
+                    disabled={uploadingSlide}
+                    className="aspect-[4/3] rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 transition-colors flex flex-col items-center justify-center gap-1 text-gray-400"
+                  >
+                    {uploadingSlide ? (
+                      <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Plus size={20} />
+                        <span className="text-xs">추가</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 랜딩페이지 생성 버튼 */}
           <button
             onClick={handleGenerateLanding}
@@ -581,13 +686,53 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
               {/* 선택된 섹션 표시 */}
               {selectedSections.length > 0 && (
                 <div className="px-4 mt-2 space-y-2">
-                  {selectedSections.map((key) => LANDING_SECTIONS.find(s => s.key === key)!).filter(Boolean).map((section) => (
-                    <div key={section.key} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
-                      <span className="text-sm">{section.emoji}</span>
-                      <span className="text-sm font-medium text-gray-600">{section.label}</span>
-                      <span className="ml-auto text-xs text-gray-300">섹션 영역</span>
-                    </div>
-                  ))}
+                  {selectedSections.map((key) => {
+                    // 이미지 슬라이드는 실제 미리보기로 표시
+                    if (key === 'sms_images' && slideImages.length > 0) {
+                      return (
+                        <div key="sms_images" className="bg-white rounded-xl shadow-sm overflow-hidden">
+                          <div className="relative aspect-[4/3]">
+                            <img
+                              src={slideImages[previewSlideIndex]}
+                              alt={`슬라이드 ${previewSlideIndex + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {slideImages.length > 1 && (
+                              <>
+                                <button
+                                  onClick={() => setPreviewSlideIndex((prev) => (prev - 1 + slideImages.length) % slideImages.length)}
+                                  className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
+                                >
+                                  <ChevronLeft size={14} />
+                                </button>
+                                <button
+                                  onClick={() => setPreviewSlideIndex((prev) => (prev + 1) % slideImages.length)}
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-black/40 text-white rounded-full flex items-center justify-center"
+                                >
+                                  <ChevronRight size={14} />
+                                </button>
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                  {slideImages.map((_, i) => (
+                                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === previewSlideIndex ? 'bg-white' : 'bg-white/50'}`} />
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const section = LANDING_SECTIONS.find(s => s.key === key);
+                    if (!section) return null;
+                    return (
+                      <div key={section.key} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center gap-2">
+                        <span className="text-sm">{section.emoji}</span>
+                        <span className="text-sm font-medium text-gray-600">{section.label}</span>
+                        <span className="ml-auto text-xs text-gray-300">섹션 영역</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
