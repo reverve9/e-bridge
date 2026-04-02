@@ -399,6 +399,15 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
     setGeneratingLanding(true);
 
     try {
+      // sms_content 보장 + 이전 랜딩 삭제
+      const sectionsToSave = contentOrder.includes('sms_content')
+        ? contentOrder
+        : ['sms_content', ...contentOrder];
+      const imagesToSave = contentOrder.includes('sms_images') ? slideImages : [];
+
+      // 이전 랜딩페이지 삭제 (후보자당 1개 유지)
+      await supabase.from('sms_landings').delete().eq('candidate_id', candidateId);
+
       const { data, error } = await supabase
         .from('sms_landings')
         .insert({
@@ -407,8 +416,8 @@ export default function SmsTab({ candidateId }: SmsTabProps) {
           body: body.trim() || null,
           closing: closing.trim() || null,
           selected_pledge_ids: [...selectedPledgeIds],
-          sections: contentOrder,
-          slide_images: showSlideImages ? slideImages : [],
+          sections: sectionsToSave,
+          slide_images: imagesToSave,
         })
         .select('id')
         .single();
