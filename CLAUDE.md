@@ -62,7 +62,7 @@ Party-based theming with three modes: classic, colorful, dark. Defined in `packa
 - **voter-app:** `SmsLandingPage.tsx` — `/:partyCode/:candidateCode/:landingId` 라우트
 - **이브릿지 섹션:** `LANDING_SECTIONS` 상수 배열 (profile, intro, pledges, gallery, feeds, cheers, contact) — 기존 유권자앱 데이터를 가져옴
 - **이미지 슬라이드:** 문자 전용 섹션, 최대 6장, `candidates` 버킷 `sms-slides/` 폴더에 저장, `sms_landings.slide_images` text[] 컬럼
-  - 5초 자동 슬라이드 + 좌우 스와이프/버튼 + 도트 인디케이터
+  - 좌우 스와이프/버튼 + 하단 썸네일 5열 (클릭으로 전환, 선택 시 정당 컬러 테두리)
   - 독립 토글로 ON/OFF, 이브릿지 섹션과 분리
 - **콘텐츠 순서:** `sections` 필드에 `sms_content`, `sms_images`, 이브릿지 섹션 키를 통합 저장하여 표시 순서 관리
   - `sms_content` — 문자 내용(인사말/본문/마무리), 항상 포함
