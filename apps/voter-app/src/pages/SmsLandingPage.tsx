@@ -176,15 +176,6 @@ function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const c = theme.colors;
 
-  // 5초 자동 슬라이드
-  useEffect(() => {
-    if (images.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % images.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [images.length]);
-
   if (images.length === 0) return null;
 
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
@@ -233,17 +224,27 @@ function SmsImageSlider({ images, theme }: { images: string[]; theme: Theme }) {
                   <ChevronRight size={18} />
                 </button>
               )}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {images.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === current ? 'bg-white' : 'bg-white/50'}`}
-                  />
-                ))}
-              </div>
             </>
           )}
         </div>
+        {/* 썸네일 5열 */}
+        {images.length > 1 && (
+          <div className="grid grid-cols-5 gap-1 p-2" style={{ backgroundColor: c.cardBg }}>
+            {images.map((url, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className="aspect-square rounded-lg overflow-hidden"
+                style={{
+                  border: i === current ? `2px solid ${c.primary}` : '2px solid transparent',
+                  opacity: i === current ? 1 : 0.5,
+                }}
+              >
+                <img src={url} alt={`썸네일 ${i + 1}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
